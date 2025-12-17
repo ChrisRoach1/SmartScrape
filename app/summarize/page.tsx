@@ -53,7 +53,7 @@ export default function SummarizePage() {
     console.log(links);
   }
 
-  async function handlCreateCrawlLog() {
+  async function handlCreateScrapeLog() {
     if (links) {
       console.log(links);
       const id = await createCrawlLog({ urls: links });
@@ -107,7 +107,7 @@ export default function SummarizePage() {
 
       <hr className='mt-2 mb-2 text-gray-300' />
 
-      <Button disabled={links === null} onClick={() => handlCreateCrawlLog()}>
+      <Button disabled={links === null} onClick={() => handlCreateScrapeLog()}>
         Generate
       </Button>
 
