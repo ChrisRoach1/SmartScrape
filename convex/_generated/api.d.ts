@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as crawlLog from "../crawlLog.js";
+import type * as firecrawlActions from "../firecrawlActions.js";
 import type * as myFunctions from "../myFunctions.js";
 
 import type {
@@ -17,6 +19,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  crawlLog: typeof crawlLog;
+  firecrawlActions: typeof firecrawlActions;
   myFunctions: typeof myFunctions;
 }>;
 
