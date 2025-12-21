@@ -15,6 +15,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import MarkdownPreview from '@uiw/react-markdown-preview';
+import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 
 const formSchema = z.object({
   link: z.union([z.literal(''), z.url()]),
@@ -22,6 +23,8 @@ const formSchema = z.object({
 });
 
 export default function SummarizePage() {
+  const { userId } = useAuth();
+
   const [links, updateLinks] = useState<string[] | null>(null);
   const [scrapeLogId, updateScrapeLogId] = useState<Id<'scrapeLog'> | null>(null);
   const createCrawlLog = useMutation(api.scrapeLog.createLogRecord);
@@ -78,6 +81,10 @@ export default function SummarizePage() {
     } catch (err) {
       toast('Failed to copy');
     }
+  }
+
+  if (!userId) {
+    return <RedirectToSignIn />;
   }
 
   return (

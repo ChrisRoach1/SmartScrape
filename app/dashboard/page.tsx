@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Copy, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 
 export default function DashboardPage() {
+  const { userId } = useAuth();
+
   const logs = useQuery(api.scrapeLog.getAllLogs);
 
   async function handleCopy(markdown: string) {
@@ -18,6 +21,10 @@ export default function DashboardPage() {
     } catch {
       toast('Failed to copy');
     }
+  }
+
+  if (!userId) {
+    return <RedirectToSignIn />;
   }
 
   if (logs === undefined) {
