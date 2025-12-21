@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PlusIcon, XIcon, Loader2, Copy } from 'lucide-react';
 import { useState } from 'react';
@@ -16,19 +17,21 @@ import { Id } from '@/convex/_generated/dataModel';
 import MarkdownPreview from '@uiw/react-markdown-preview';
 
 const formSchema = z.object({
-  link: z.url(),
+  link: z.union([z.literal(''), z.url()]),
+  instructions: z.string().optional(),
 });
 
 export default function SummarizePage() {
   const [links, updateLinks] = useState<string[] | null>(null);
   const [scrapeLogId, updateScrapeLogId] = useState<Id<'scrapeLog'> | null>(null);
-  const createCrawlLog = useMutation(api.crawlLog.createLogRecord);
-  const crawlLog = useQuery(api.crawlLog.getCrawlLog, scrapeLogId ? { id: scrapeLogId } : 'skip');
+  const createCrawlLog = useMutation(api.scrapeLog.createLogRecord);
+  const crawlLog = useQuery(api.scrapeLog.getScrapeLog, scrapeLogId ? { id: scrapeLogId } : 'skip');
 
   const linkForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       link: '',
+      instructions: '',
     },
   });
 
@@ -36,28 +39,33 @@ export default function SummarizePage() {
     updateLinks(links?.filter((item) => item !== link) ?? null);
   }
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (links && links?.indexOf(values.link) > -1) {
-      linkForm.reset();
-      toast('Link has already been added!');
-      return;
-    }
-
-    if (links === null) {
-      updateLinks([values.link]);
-    } else {
-      updateLinks([...links, values.link]);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (links) {
+      const id = await createCrawlLog({ urls: links, instructions: values.instructions });
+      updateScrapeLogId(id);
     }
 
     linkForm.reset();
-    console.log(links);
   }
 
-  async function handlCreateScrapeLog() {
-    if (links) {
-      console.log(links);
-      const id = await createCrawlLog({ urls: links });
-      updateScrapeLogId(id);
+  function handleLinkAdd() {
+    console.log(linkForm.getValues());
+    const link = linkForm.getValues().link;
+
+    if (link) {
+      if (links && links?.indexOf(link) > -1) {
+        linkForm.reset();
+        toast('Link has already been added!');
+        return;
+      }
+
+      if (links === null) {
+        updateLinks([link]);
+      } else {
+        updateLinks([...links, link]);
+      }
+
+      linkForm.setValue('link', '');
     }
   }
 
@@ -76,9 +84,14 @@ export default function SummarizePage() {
     <div>
       <div className='mb-5'>
         {links?.map((item) => (
-          <Badge key={item} className='gap-1'>
+          <Badge key={item} className='gap-1' variant={'secondary'}>
             {item}
-            <Button className='h-3 w-3 cursor-pointer hover:text-destructive' onClick={() => removeLink(item)}>
+            <Button
+              disabled={crawlLog !== undefined}
+              variant={'secondary'}
+              className='h-3 w-3 cursor-pointer hover:text-destructive'
+              onClick={() => removeLink(item)}
+            >
               <XIcon />
             </Button>
           </Badge>
@@ -86,30 +99,48 @@ export default function SummarizePage() {
       </div>
 
       <Form {...linkForm}>
-        <form onSubmit={linkForm.handleSubmit(onSubmit)} className='space-x-8 flex flex-row'>
-          <FormField
-            control={linkForm.control}
-            name='link'
-            render={({ field }) => (
-              <FormItem className='flex-2'>
-                <FormControl>
-                  <Input placeholder='https://google.com' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button variant='default' size='icon' aria-label='Submit'>
-            <PlusIcon />
-          </Button>
+        <form onSubmit={linkForm.handleSubmit(onSubmit)}>
+          <div className='space-x-8 flex flex-row'>
+            <FormField
+              control={linkForm.control}
+              name='link'
+              disabled={crawlLog !== undefined}
+              render={({ field }) => (
+                <FormItem className='flex-2'>
+                  <FormControl>
+                    <Input placeholder='https://google.com' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button disabled={crawlLog !== undefined} variant={'outline'} size='icon' type='button' onClick={() => handleLinkAdd()}>
+              <PlusIcon />
+            </Button>
+          </div>
+
+          <hr className='mt-2 mb-2 text-gray-300' />
+
+          <div className='grid w-full gap-2'>
+            <FormField
+              control={linkForm.control}
+              name='instructions'
+              disabled={crawlLog !== null}
+              render={({ field }) => (
+                <FormItem className=''>
+                  <FormControl>
+                    <Textarea className='h-44' placeholder='Enter additional instructions for summarization...' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button disabled={links === null || crawlLog !== undefined} type='submit'>
+              Generate
+            </Button>
+          </div>
         </form>
       </Form>
-
-      <hr className='mt-2 mb-2 text-gray-300' />
-
-      <Button disabled={links === null} onClick={() => handlCreateScrapeLog()}>
-        Generate
-      </Button>
 
       {crawlLog && crawlLog.status === 'processing' && (
         <div className='mt-4 flex items-center justify-center'>
