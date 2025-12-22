@@ -7,6 +7,7 @@ export default defineSchema({
   }),
 
   scrapeLog: defineTable({
+    title: v.optional(v.string()),
     userId: v.string(),
     urls: v.array(v.string()),
     status: v.union(v.literal('processing'), v.literal('completed'), v.literal('failed')),

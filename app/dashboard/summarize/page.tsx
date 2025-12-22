@@ -19,6 +19,7 @@ import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 
 const formSchema = z.object({
   link: z.union([z.literal(''), z.url()]),
+  title: z.string().optional(),
   instructions: z.string().optional(),
 });
 
@@ -34,6 +35,7 @@ export default function SummarizePage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       link: '',
+      title: '',
       instructions: '',
     },
   });
@@ -44,7 +46,7 @@ export default function SummarizePage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (links) {
-      const id = await createCrawlLog({ urls: links, instructions: values.instructions });
+      const id = await createCrawlLog({ urls: links, title: values.title, instructions: values.instructions });
       updateScrapeLogId(id);
     }
 
@@ -129,6 +131,19 @@ export default function SummarizePage() {
           <hr className='mt-2 mb-2 text-gray-300' />
 
           <div className='grid w-full gap-2'>
+            <FormField
+              control={linkForm.control}
+              name='title'
+              disabled={crawlLog !== null}
+              render={({ field }) => (
+                <FormItem className=''>
+                  <FormControl>
+                    <Input placeholder='Enter title for this scrape...' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={linkForm.control}
               name='instructions'

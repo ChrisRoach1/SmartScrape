@@ -5,6 +5,7 @@ import { api } from './_generated/api';
 export const createLogRecord = mutation({
   args: {
     urls: v.array(v.string()),
+    title: v.optional(v.string()),
     instructions: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -15,7 +16,7 @@ export const createLogRecord = mutation({
 
     const userID = identity.tokenIdentifier.split('|')[1];
 
-    const log = await ctx.db.insert('scrapeLog', { urls: args.urls, status: 'processing', userId: userID });
+    const log = await ctx.db.insert('scrapeLog', { urls: args.urls, title: args.title, status: 'processing', userId: userID });
     ctx.scheduler.runAfter(0, api.firecrawlActions.startScrape, { id: log, urls: args.urls, instructions: args.instructions });
     return log;
   },
