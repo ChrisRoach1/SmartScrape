@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Home, Inbox, Sparkles, LogOut } from 'lucide-react';
+import { Home, Inbox, LogOut } from 'lucide-react';
 
 import {
   Sidebar,
@@ -14,7 +14,6 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useUser, useClerk, UserAvatar } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,10 +42,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <Link href='/' className='group flex items-center gap-2.5 transition-transform hover:scale-[1.02]'>
-              <span className='flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md transition-shadow group-hover:shadow-lg'>
-                <Sparkles className='h-5 w-5' />
-              </span>
-              <span className='text-lg font-bold tracking-tight'>
+              <span className='text-lg font-bold tracking-tight ml-2'>
                 Smart<span className='text-primary'>Scrape</span>
               </span>
             </Link>
