@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 export function Benefits() {
   return (
     <section className='py-24 md:py-32'>
-      <div className='container px-4 md:px-6'>
+      <div className='container mx-auto px-4 md:px-6'>
         <div className='grid gap-12 lg:grid-cols-2 lg:gap-24'>
           <div className='flex flex-col justify-center'>
             <h2 className='mb-6 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl'>

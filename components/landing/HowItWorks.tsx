@@ -1,7 +1,7 @@
 export function HowItWorks() {
   return (
     <section className='bg-secondary/20 py-24 md:py-32'>
-      <div className='container px-4 md:px-6'>
+      <div className='container mx-auto px-4 md:px-6'>
         <div className='mb-16 text-center'>
           <h2 className='text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl'>Simple by design</h2>
           <p className='mt-4 text-lg text-muted-foreground'>Three steps to clarity.</p>
