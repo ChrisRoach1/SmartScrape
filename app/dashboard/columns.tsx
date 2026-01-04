@@ -87,29 +87,33 @@ export function createColumns(onViewLog?: (id: Doc<'scrapeLog'>) => void): Colum
       cell: ({ row }) => {
         const isCompleted = row.original.status === 'completed';
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='ghost' className='h-8 w-8 p-0'>
-                <span className='sr-only'>Open menu</span>
-                <MoreHorizontal className='h-4 w-4' />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              {isCompleted && onViewLog && (
-                <DropdownMenuItem onClick={() => onViewLog(row.original)}>
-                  <Eye className='h-4 w-4 mr-2' />
-                  View Summary
+        if (isCompleted) {
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' className='h-8 w-8 p-0'>
+                  <span className='sr-only'>Open menu</span>
+                  <MoreHorizontal className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                {isCompleted && onViewLog && (
+                  <DropdownMenuItem onClick={() => onViewLog(row.original)}>
+                    <Eye className='h-4 w-4 mr-2' />
+                    View Summary
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => handleCopy(row.original.summarizedMarkdown ?? '')}>
+                  <Copy className='h-4 w-4 mr-2' />
+                  Copy Markdown
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => handleCopy(row.original.summarizedMarkdown ?? '')}>
-                <Copy className='h-4 w-4 mr-2' />
-                Copy Markdown
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        } else {
+          return <></>;
+        }
       },
     },
   ];
