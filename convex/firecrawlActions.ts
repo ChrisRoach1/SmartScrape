@@ -4,8 +4,21 @@ import { v } from 'convex/values';
 import { action } from './_generated/server';
 import { api } from './_generated/api';
 import Firecrawl from '@mendable/firecrawl-js';
-import { generateText } from 'ai';
+import { generateText, generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { z } from 'zod';
+
+const structuredInsightsSchema = z.object({
+  keyFindings: z.array(z.string()).describe('3-5 key takeaways or findings from the analyzed content'),
+  companiesMentioned: z.array(z.string()).describe('Names of companies, competitors, or partners mentioned in the content'),
+  actionItems: z.array(z.string()).describe('3-5 specific, actionable recommendations based on the analysis'),
+  sentiment: z
+    .enum(['positive', 'negative', 'neutral', 'mixed'])
+    .describe('Overall sentiment of the market/competitive landscape based on the content'),
+  topicsIdentified: z
+    .array(z.string())
+    .describe('Key topics or themes identified (e.g., "pricing", "product launch", "regulation", "partnerships")'),
+});
 
 export const startScrape = action({
   args: {
@@ -28,6 +41,9 @@ export const startScrape = action({
       }
     }
 
+    const combinedContent = scrapedResults.join('NEXT POST');
+
+    // Generate the markdown summary
     const { text } = await generateText({
       model: openai('gpt-5-mini'),
       system:
@@ -41,15 +57,39 @@ export const startScrape = action({
                Do not ask follow up questions.
                You are free to search the web for more info if you think that would be helpful but be sure to include your sources ON ALL INFO. 
                Everything is 1 large string of text separated by 'NEXT POST'. it is given to you in basically
-              raw HTML scraped from each site: ${scrapedResults.join('NEXT POST')} ${args.instructions ? `${additionalInstructionsPrompt} ${args.instructions}` : ''}`,
+              raw HTML scraped from each site: ${combinedContent} ${args.instructions ? `${additionalInstructionsPrompt} ${args.instructions}` : ''}`,
 
       tools: {
         web_search: openai.tools.webSearch(),
       },
     });
 
+    // Extract structured insights from the generated summary
+    const { object: structuredInsights } = await generateObject({
+      model: openai('gpt-5-mini'),
+      schema: structuredInsightsSchema,
+      system:
+        'You are an expert at extracting structured competitive intelligence insights. ' +
+        'Analyze the provided content and extract key information in a structured format. ' +
+        'Be concise and specific. Focus on actionable insights.',
+      prompt: `Based on the following competitive intelligence summary, extract structured insights:
+${text}
+Original source content (for additional context):
+${combinedContent.substring(0, 5000)}...`,
+    });
+
     await ctx.runMutation(api.scrapeLog.updateLogRecordStatus, { id: args.id, status: 'completed' });
     await ctx.runMutation(api.scrapeLog.updateLogRecordSummarziedMarkdown, { id: args.id, summarizedMarkdown: text });
+    await ctx.runMutation(api.scrapeLog.updateLogRecordStructuredInsights, {
+      id: args.id,
+      structuredInsights: {
+        keyFindings: structuredInsights.keyFindings,
+        companiesMentioned: structuredInsights.companiesMentioned,
+        actionItems: structuredInsights.actionItems,
+        sentiment: structuredInsights.sentiment,
+        topicsIdentified: structuredInsights.topicsIdentified,
+      },
+    });
     console.log('scrapeResult:', scrapedResults);
   },
 });

@@ -10,6 +10,7 @@
 
 import type * as firecrawlActions from "../firecrawlActions.js";
 import type * as scrapeLog from "../scrapeLog.js";
+import type * as sourceLibrary from "../sourceLibrary.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +21,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   firecrawlActions: typeof firecrawlActions;
   scrapeLog: typeof scrapeLog;
+  sourceLibrary: typeof sourceLibrary;
 }>;
 
 /**

@@ -28,11 +28,6 @@ export const updateLogRecordStatus = mutation({
     status: v.union(v.literal('processing'), v.literal('completed'), v.literal('failed')),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (identity === null) {
-      throw new Error('Not authenticated');
-    }
-
     return await ctx.db.patch(args.id, { status: args.status });
   },
 });
@@ -43,12 +38,25 @@ export const updateLogRecordSummarziedMarkdown = mutation({
     summarizedMarkdown: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (identity === null) {
-      throw new Error('Not authenticated');
-    }
-
     return await ctx.db.patch(args.id, { summarizedMarkdown: args.summarizedMarkdown });
+  },
+});
+
+export const updateLogRecordStructuredInsights = mutation({
+  args: {
+    id: v.id('scrapeLog'),
+    structuredInsights: v.object({
+      keyFindings: v.array(v.string()),
+      companiesMentioned: v.array(v.string()),
+      actionItems: v.array(v.string()),
+      sentiment: v.union(v.literal('positive'), v.literal('negative'), v.literal('neutral'), v.literal('mixed')),
+      topicsIdentified: v.array(v.string()),
+    }),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { structuredInsights: args.structuredInsights });
+    return null;
   },
 });
 

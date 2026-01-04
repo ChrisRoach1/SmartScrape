@@ -2,17 +2,10 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Doc } from '@/convex/_generated/dataModel';
 import { ColumnDef } from '@tanstack/react-table';
-import { CircleAlert, CircleCheck, LoaderIcon, MoreHorizontal } from 'lucide-react';
+import { CircleAlert, CircleCheck, LoaderIcon, MoreHorizontal, TrendingUp, TrendingDown, Minus, Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 
 async function handleCopy(markdown: string) {
@@ -61,7 +54,33 @@ export const columns: ColumnDef<Doc<'scrapeLog'>>[] = [
       </Badge>
     ),
   },
+  {
+    id: 'sentiment',
+    header: 'Sentiment',
+    cell: ({ row }) => {
+      const sentiment = row.original.structuredInsights?.sentiment;
+      if (!sentiment) {
+        return <span className='text-muted-foreground text-sm'>-</span>;
+      }
 
+      const sentimentConfig = {
+        positive: { icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50' },
+        negative: { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50' },
+        neutral: { icon: Minus, color: 'text-gray-500', bg: 'bg-gray-50' },
+        mixed: { icon: Shuffle, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+      };
+
+      const config = sentimentConfig[sentiment];
+      const Icon = config.icon;
+
+      return (
+        <Badge variant='outline' className={`${config.color} ${config.bg} capitalize gap-1`}>
+          <Icon className='h-3 w-3' />
+          {sentiment}
+        </Badge>
+      );
+    },
+  },
   {
     id: 'actions',
     cell: ({ row }) => {

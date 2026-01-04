@@ -23,10 +23,13 @@ export default function RootLayout({
 
   switch (pathname) {
     case '/dashboard':
-      breadcrumb = 'Dashoard';
+      breadcrumb = 'Dashboard';
       break;
     case '/dashboard/summarize':
       breadcrumb = 'Summarize';
+      break;
+    case '/dashboard/sources':
+      breadcrumb = 'Sources';
       break;
     default:
       breadcrumb = '';

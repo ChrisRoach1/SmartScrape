@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Home, Inbox, LogOut } from 'lucide-react';
+import { Home, Inbox, LogOut, Library } from 'lucide-react';
 
 import {
   Sidebar,
@@ -29,6 +29,11 @@ const items = [
     title: 'Summarize',
     url: '/dashboard/summarize',
     icon: Inbox,
+  },
+  {
+    title: 'Sources',
+    url: '/dashboard/sources',
+    icon: Library,
   },
 ];
 
