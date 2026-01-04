@@ -5,22 +5,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  PlusIcon,
-  XIcon,
-  Loader2,
-  Copy,
-  Library,
-  Save,
-  Lightbulb,
-  Building2,
-  CheckSquare,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Shuffle,
-  Tag,
-} from 'lucide-react';
+import { PlusIcon, XIcon, Loader2, Copy, Library, Save } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -29,12 +14,10 @@ import { toast } from 'sonner';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import MarkdownPreview from '@uiw/react-markdown-preview';
 import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrapeLogViewer } from '@/components/scrape-log-viewer';
 
 const formSchema = z.object({
   link: z.union([z.literal(''), z.url()]),
@@ -299,140 +282,7 @@ export default function SummarizePage() {
             </Button>
           </div>
 
-          <Tabs defaultValue='summary' className='w-full'>
-            <TabsList className='grid w-full grid-cols-2'>
-              <TabsTrigger value='summary'>Summary</TabsTrigger>
-              <TabsTrigger value='insights'>Insights</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value='summary' className='mt-4'>
-              <MarkdownPreview
-                source={crawlLog?.summarizedMarkdown}
-                style={{ padding: 16, background: 'white', color: 'black', outline: 'solid', outlineColor: 'lightgray' }}
-              />
-            </TabsContent>
-
-            <TabsContent value='insights' className='mt-4'>
-              {crawlLog.structuredInsights ? (
-                <div className='grid gap-4 md:grid-cols-2'>
-                  {/* Sentiment Card */}
-                  <Card>
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-sm font-medium flex items-center gap-2'>
-                        {crawlLog.structuredInsights.sentiment === 'positive' && <TrendingUp className='h-4 w-4 text-green-500' />}
-                        {crawlLog.structuredInsights.sentiment === 'negative' && <TrendingDown className='h-4 w-4 text-red-500' />}
-                        {crawlLog.structuredInsights.sentiment === 'neutral' && <Minus className='h-4 w-4 text-gray-500' />}
-                        {crawlLog.structuredInsights.sentiment === 'mixed' && <Shuffle className='h-4 w-4 text-yellow-500' />}
-                        Market Sentiment
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge
-                        variant={
-                          crawlLog.structuredInsights.sentiment === 'positive'
-                            ? 'default'
-                            : crawlLog.structuredInsights.sentiment === 'negative'
-                              ? 'destructive'
-                              : 'secondary'
-                        }
-                        className='capitalize'
-                      >
-                        {crawlLog.structuredInsights.sentiment}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-
-                  {/* Topics Card */}
-                  <Card>
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-sm font-medium flex items-center gap-2'>
-                        <Tag className='h-4 w-4' />
-                        Topics Identified
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='flex flex-wrap gap-1'>
-                        {crawlLog.structuredInsights.topicsIdentified.map((topic, i) => (
-                          <Badge key={i} variant='outline'>
-                            {topic}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Key Findings Card */}
-                  <Card className='md:col-span-2'>
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-sm font-medium flex items-center gap-2'>
-                        <Lightbulb className='h-4 w-4' />
-                        Key Findings
-                      </CardTitle>
-                      <CardDescription>Top takeaways from the analysis</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className='space-y-2'>
-                        {crawlLog.structuredInsights.keyFindings.map((finding, i) => (
-                          <li key={i} className='flex items-start gap-2'>
-                            <span className='text-primary font-bold'>{i + 1}.</span>
-                            <span>{finding}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-
-                  {/* Action Items Card */}
-                  <Card className='md:col-span-2'>
-                    <CardHeader className='pb-2'>
-                      <CardTitle className='text-sm font-medium flex items-center gap-2'>
-                        <CheckSquare className='h-4 w-4' />
-                        Recommended Actions
-                      </CardTitle>
-                      <CardDescription>Actionable next steps based on the analysis</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className='space-y-2'>
-                        {crawlLog.structuredInsights.actionItems.map((action, i) => (
-                          <li key={i} className='flex items-start gap-2'>
-                            <CheckSquare className='h-4 w-4 text-muted-foreground mt-0.5 shrink-0' />
-                            <span>{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-
-                  {/* Companies Mentioned Card */}
-                  {crawlLog.structuredInsights.companiesMentioned.length > 0 && (
-                    <Card className='md:col-span-2'>
-                      <CardHeader className='pb-2'>
-                        <CardTitle className='text-sm font-medium flex items-center gap-2'>
-                          <Building2 className='h-4 w-4' />
-                          Companies Mentioned
-                        </CardTitle>
-                        <CardDescription>Competitors and partners identified in the content</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className='flex flex-wrap gap-2'>
-                          {crawlLog.structuredInsights.companiesMentioned.map((company, i) => (
-                            <Badge key={i} variant='secondary'>
-                              {company}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              ) : (
-                <div className='text-center py-8 text-muted-foreground'>
-                  <p>Structured insights are not available for this analysis.</p>
-                  <p className='text-sm'>This may be an older analysis created before insights extraction was added.</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <ScrapeLogViewer summarizedMarkdown={crawlLog.summarizedMarkdown} structuredInsights={crawlLog.structuredInsights} />
         </div>
       )}
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { api } from '@/convex/_generated/api';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,12 +9,23 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { DataTable } from './data-table';
-import { columns } from './columns';
+import { createColumns } from './columns';
+import { ScrapeLogDialog } from '@/components/scrape-log-dialog';
+import { useState } from 'react';
 
 export default function DashboardPage() {
   const { userId } = useAuth();
+  const [selectedLog, setSelectedLog] = useState<Doc<'scrapeLog'> | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const logs = useQuery(api.scrapeLog.getAllLogs);
+
+  const handleViewLog = (scrapeLog: Doc<'scrapeLog'>) => {
+    setSelectedLog(scrapeLog);
+    setIsDialogOpen(true);
+  };
+
+  const columns = createColumns(handleViewLog);
 
   if (!userId) {
     return <RedirectToSignIn />;
@@ -78,6 +90,8 @@ export default function DashboardPage() {
       <div className='container mx-auto py-6'>
         <DataTable columns={columns} data={logs} />
       </div>
+
+      <ScrapeLogDialog scrapeLog={selectedLog} open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );
 }
