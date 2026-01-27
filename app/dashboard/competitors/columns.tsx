@@ -5,42 +5,56 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, Pencil, Play, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
-type SourceColumnHandlers = {
-  onStartAnalysis: (urls: string[]) => void;
-  onEdit: (source: Doc<'sourceLibrary'>) => void;
-  onDelete: (id: Id<'sourceLibrary'>) => void;
+type CompetitorColumnHandlers = {
+  onEdit: (competitor: Doc<'competitors'>) => void;
+  onDelete: (id: Id<'competitors'>) => void;
 };
 
-export const sourceColumns = (handlers: SourceColumnHandlers): ColumnDef<Doc<'sourceLibrary'>>[] => {
+export const competitorColumns = (handlers: CompetitorColumnHandlers): ColumnDef<Doc<'competitors'>>[] => {
   return [
     {
       accessorKey: 'name',
       header: 'Name',
     },
     {
-      accessorKey: 'description',
-      header: 'Description',
+      accessorKey: 'scanFrequency',
+      header: 'Scan Frequency',
+      cell: ({ row }) => {
+        const frequency = row.getValue('scanFrequency') as 'w' | 'm';
+        return <Badge variant='secondary'>{frequency === 'w' ? 'Weekly' : 'Monthly'}</Badge>;
+      },
     },
     {
-      id: 'urls',
-      header: 'URLs',
+      accessorKey: 'lastScannedOn',
+      header: 'Last Scanned',
       cell: ({ row }) => {
-        return <Badge variant='secondary'>{row.original.urls.length}</Badge>;
+        const timestamp = row.getValue('lastScannedOn') as number | undefined;
+        if (!timestamp) {
+          return <span className='text-muted-foreground'>Never</span>;
+        }
+        return (
+          <div>
+            {new Date(timestamp).toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </div>
+        );
       },
     },
     {
       accessorKey: '_creationTime',
-      header: () => <div>Created At</div>,
+      header: 'Created At',
       cell: ({ row }) => {
         const timestamp = new Date(row.getValue('_creationTime')).toLocaleString('en-US', {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
         });
 
         return <div>{timestamp}</div>;
@@ -57,10 +71,6 @@ export const sourceColumns = (handlers: SourceColumnHandlers): ColumnDef<Doc<'so
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem onClick={() => handlers.onStartAnalysis(row.original.urls)}>
-                <Play className='h-4 w-4 mr-2' />
-                Start Analysis
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handlers.onEdit(row.original)}>
                 <Pencil className='h-4 w-4 mr-2' />
                 Edit

@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as competitor from "../competitor.js";
+import type * as crons from "../crons.js";
 import type * as firecrawlActions from "../firecrawlActions.js";
 import type * as scrapeLog from "../scrapeLog.js";
 import type * as sourceLibrary from "../sourceLibrary.js";
@@ -19,6 +21,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  competitor: typeof competitor;
+  crons: typeof crons;
   firecrawlActions: typeof firecrawlActions;
   scrapeLog: typeof scrapeLog;
   sourceLibrary: typeof sourceLibrary;

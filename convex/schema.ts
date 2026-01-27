@@ -2,7 +2,6 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 export default defineSchema({
-
   scrapeLog: defineTable({
     title: v.optional(v.string()),
     userId: v.string(),
@@ -31,7 +30,11 @@ export default defineSchema({
     name: v.string(),
     userId: v.string(),
     scanFrequency: v.union(v.literal('w'), v.literal('m')),
-    lastScannedOn: v.number(),
-    
-  })
+    lastScannedOn: v.optional(v.number()),
+  }).index('by_userId', ['userId']),
+
+  competitorAnalysis: defineTable({
+    competitorId: v.id('competitors'),
+    analysis: v.string(),
+  }).index('competitorId', ['competitorId']),
 });
