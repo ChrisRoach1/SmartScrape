@@ -1,0 +1,21 @@
+{
+  "name": "SmartScrape",
+  "short_name": "SmartScrape",
+  "description": "AI-powered web scraping and content summarization tool for business intelligence",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#e67e22",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ]
+}
