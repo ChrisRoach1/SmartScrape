@@ -27,7 +27,7 @@ const sourceFormSchema = z.object({
   urlInput: z.union([z.literal(''), z.url('Please enter a valid URL')]),
 });
 
-export default function SourcesPage() {
+export default function CompetitorsPage() {
   const { userId } = useAuth();
   const router = useRouter();
   const sources = useQuery(api.sourceLibrary.getAll);

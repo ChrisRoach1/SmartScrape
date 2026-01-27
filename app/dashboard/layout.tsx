@@ -31,6 +31,9 @@ export default function RootLayout({
     case '/dashboard/sources':
       breadcrumb = 'Sources';
       break;
+    case '/dashboard/competitors':
+      breadcrumb = 'Competitors';
+      break;      
     default:
       breadcrumb = '';
       break;

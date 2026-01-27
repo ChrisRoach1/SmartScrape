@@ -35,6 +35,11 @@ const items = [
     url: '/dashboard/sources',
     icon: Library,
   },
+  {
+    title: 'Competitors',
+    url: '/dashboard/competitors',
+    icon: Library,
+  },  
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
