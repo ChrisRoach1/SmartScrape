@@ -36,5 +36,5 @@ export default defineSchema({
   competitorAnalysis: defineTable({
     competitorId: v.id('competitors'),
     analysis: v.string(),
-  }).index('competitorId', ['competitorId']),
+  }).index('by_competitorId', ['competitorId']),
 });

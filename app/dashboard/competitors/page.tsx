@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
-import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,8 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { ScrapeLogViewer } from '@/components/scrape-log-viewer';
 import { DataTable } from '../data-table';
 import { competitorColumns } from './columns';
 
@@ -25,15 +25,19 @@ const competitorFormSchema = z.object({
 });
 
 export default function CompetitorsPage() {
-  const { userId } = useAuth();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState<Id<'competitors'> | null>(null);
+  const [viewingId, setViewingId] = useState<Id<'competitors'> | null>(null);
+  const [isViewSummariesOpen, setIsViewSummariesOpen] = useState(false);
+  const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState(0);
+
   const competitors = useQuery(api.competitor.getAll);
   const createCompetitor = useMutation(api.competitor.create);
   const updateCompetitor = useMutation(api.competitor.update);
   const removeCompetitor = useMutation(api.competitor.remove);
+  const getAnalysis = useQuery(api.competitor.getAnalysisByCompetitorId, viewingId ? {id:viewingId} :'skip');
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingId, setEditingId] = useState<Id<'competitors'> | null>(null);
 
   const form = useForm<z.infer<typeof competitorFormSchema>>({
     resolver: zodResolver(competitorFormSchema),
@@ -42,10 +46,6 @@ export default function CompetitorsPage() {
       frequency: 'm',
     },
   });
-
-  if (!userId) {
-    return <RedirectToSignIn />;
-  }
 
   if (competitors === undefined) {
     return (
@@ -138,7 +138,13 @@ export default function CompetitorsPage() {
     }
   }
 
-  function handleEdit(competitor: NonNullable<typeof competitors>[number]) {
+  function handleLoadAnalysis(id: Id<'competitors'>) {
+    setViewingId(id);
+    setCurrentAnalysisIndex(0);
+    setIsViewSummariesOpen(true);
+  }
+
+  function handleEdit(competitor: Doc<'competitors'>) {
     setEditingId(competitor._id);
 
     form.reset({
@@ -244,10 +250,88 @@ export default function CompetitorsPage() {
           columns={competitorColumns({
             onEdit: (competitor) => handleEdit(competitor),
             onDelete: (id) => handleDelete(id),
+            onView: (id) => handleLoadAnalysis(id)
           })}
           data={competitors}
         />
       )}
+
+      <Dialog
+        open={isViewSummariesOpen}
+        onOpenChange={(open) => {
+          setIsViewSummariesOpen(open);
+          if (!open) {
+            setViewingId(null);
+            setCurrentAnalysisIndex(0);
+          }
+        }}
+      >
+        <DialogContent className='lg:max-w-1/2 max-h-[85vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>Competitor Analyses</DialogTitle>
+            <DialogDescription>
+              {getAnalysis && getAnalysis.length > 0
+                ? `Viewing analysis ${currentAnalysisIndex + 1} of ${getAnalysis.length}`
+                : 'No analyses available'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {getAnalysis === undefined ? (
+            <div className='flex-1 flex items-center justify-center py-12'>
+              <Skeleton className='h-64 w-full' />
+            </div>
+          ) : getAnalysis.length === 0 ? (
+            <div className='flex-1 flex flex-col items-center justify-center py-12 text-center'>
+              <p className='text-muted-foreground mb-2'>No analyses yet for this competitor.</p>
+              <p className='text-sm text-muted-foreground'>
+                Analyses are generated automatically based on the scan frequency.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className='text-sm text-muted-foreground'>
+                Generated on{' '}
+                {new Date(getAnalysis[currentAnalysisIndex]?._creationTime).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+              <div className='flex-1 overflow-y-auto min-h-0'>
+                <ScrapeLogViewer
+                  summarizedMarkdown={getAnalysis[currentAnalysisIndex]?.analysis}
+                  structuredInsights={null}
+                />
+              </div>
+
+              {getAnalysis.length > 1 && (
+                <div className='flex items-center justify-between pt-4 border-t'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentAnalysisIndex((prev) => prev - 1)}
+                    disabled={currentAnalysisIndex === 0}
+                  >
+                    <ChevronLeft className='h-4 w-4 mr-1' />
+                    Previous
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentAnalysisIndex((prev) => prev + 1)}
+                    disabled={currentAnalysisIndex === getAnalysis.length - 1}
+                  >
+                    Next
+                    <ChevronRight className='h-4 w-4 ml-1' />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog

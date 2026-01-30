@@ -20,6 +20,15 @@ interface ScrapeLogViewerProps {
 }
 
 export function ScrapeLogViewer({ summarizedMarkdown, structuredInsights }: ScrapeLogViewerProps) {
+  if (!structuredInsights) {
+    return (
+      <MarkdownPreview
+        source={summarizedMarkdown}
+        style={{ padding: 16, background: 'white', color: 'black', outline: 'solid', outlineColor: 'lightgray' }}
+      />
+    );
+  }
+
   return (
     <Tabs defaultValue='summary' className='w-full'>
       <TabsList className='grid w-full grid-cols-2'>
@@ -35,8 +44,7 @@ export function ScrapeLogViewer({ summarizedMarkdown, structuredInsights }: Scra
       </TabsContent>
 
       <TabsContent value='insights' className='mt-4'>
-        {structuredInsights ? (
-          <div className='grid gap-4 md:grid-cols-2'>
+        <div className='grid gap-4 md:grid-cols-2'>
             {/* Sentiment Card */}
             <Card>
               <CardHeader className='pb-2'>
@@ -146,13 +154,7 @@ export function ScrapeLogViewer({ summarizedMarkdown, structuredInsights }: Scra
                 </CardContent>
               </Card>
             )}
-          </div>
-        ) : (
-          <div className='text-center py-8 text-muted-foreground'>
-            <p>Structured insights are not available for this analysis.</p>
-            <p className='text-sm'>This may be an older analysis created before insights extraction was added.</p>
-          </div>
-        )}
+        </div>
       </TabsContent>
     </Tabs>
   );

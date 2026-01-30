@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,7 +27,6 @@ const sourceFormSchema = z.object({
 });
 
 export default function SourcesPage() {
-  const { userId } = useAuth();
   const router = useRouter();
   const sources = useQuery(api.sourceLibrary.getAll);
   const createSource = useMutation(api.sourceLibrary.create);
@@ -48,10 +46,6 @@ export default function SourcesPage() {
       urlInput: '',
     },
   });
-
-  if (!userId) {
-    return <RedirectToSignIn />;
-  }
 
   if (sources === undefined) {
     return (

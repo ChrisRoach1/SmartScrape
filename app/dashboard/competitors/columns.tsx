@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 type CompetitorColumnHandlers = {
   onEdit: (competitor: Doc<'competitors'>) => void;
   onDelete: (id: Id<'competitors'>) => void;
+  onView: (id: Id<'competitors'>) => void;
 };
 
 export const competitorColumns = (handlers: CompetitorColumnHandlers): ColumnDef<Doc<'competitors'>>[] => {
@@ -71,6 +72,10 @@ export const competitorColumns = (handlers: CompetitorColumnHandlers): ColumnDef
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={() => handlers.onView(row.original._id)}>
+                <Eye className='h-4 w-4 mr-2' />
+                View Analyses
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handlers.onEdit(row.original)}>
                 <Pencil className='h-4 w-4 mr-2' />
                 Edit

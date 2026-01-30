@@ -7,14 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
-import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { DataTable } from './data-table';
 import { createColumns } from './columns';
 import { ScrapeLogDialog } from '@/components/scrape-log-dialog';
 import { useState } from 'react';
 
 export default function DashboardPage() {
-  const { userId } = useAuth();
   const [selectedLog, setSelectedLog] = useState<Doc<'scrapeLog'> | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -26,10 +24,6 @@ export default function DashboardPage() {
   };
 
   const columns = createColumns(handleViewLog);
-
-  if (!userId) {
-    return <RedirectToSignIn />;
-  }
 
   if (logs === undefined) {
     return (

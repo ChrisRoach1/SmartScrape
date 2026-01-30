@@ -91,7 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <p className='text-sm font-medium truncate'>{user.fullName || 'User'}</p>
               <p className='text-xs text-muted-foreground truncate'>{user.primaryEmailAddress?.emailAddress || 'No email'}</p>
             </div>
-            <Button variant='ghost' size='icon' className='h-8 w-8 shrink-0' onClick={() => signOut()} title='Sign out'>
+            <Button variant='ghost' size='icon' className='h-8 w-8 shrink-0' onClick={() => signOut({ redirectUrl: '/' })} title='Sign out'>
               <LogOut className='h-4 w-4' />
             </Button>
           </div>

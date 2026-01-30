@@ -117,6 +117,24 @@ export const getById = query({
   },
 });
 
+export const getAnalysisByCompetitorId = query({
+  args: {
+    id: v.id('competitors'),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error('Not authenticated');
+    }
+
+    return ctx.db
+      .query('competitorAnalysis')
+      .withIndex('by_competitorId', (q) => q.eq('competitorId', args.id))
+      .order('desc')
+      .collect();
+  },
+});
+
 export const executeScan = internalAction({
   args: {
     scanFrequency: v.union(v.literal('w'), v.literal('m')),

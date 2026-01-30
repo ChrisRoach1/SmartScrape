@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
-import { RedirectToSignIn, useAuth } from '@clerk/clerk-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrapeLogViewer } from '@/components/scrape-log-viewer';
@@ -28,8 +27,6 @@ const formSchema = z.object({
 const MAX_LINKS = 10;
 
 export default function SummarizePage() {
-  const { userId } = useAuth();
-
   const [links, updateLinks] = useState<string[] | null>(null);
   const [scrapeLogId, updateScrapeLogId] = useState<Id<'scrapeLog'> | null>(null);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -153,10 +150,6 @@ export default function SummarizePage() {
     } catch {
       toast.error('Failed to save source');
     }
-  }
-
-  if (!userId) {
-    return <RedirectToSignIn />;
   }
 
   return (
