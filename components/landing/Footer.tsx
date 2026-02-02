@@ -60,24 +60,6 @@ export function Footer() {
             <p className='text-sm text-muted-foreground'>
               &copy; {new Date().getFullYear()} SmartScrape. All rights reserved.
             </p>
-            <div className='flex items-center gap-6'>
-              <a
-                href='https://twitter.com/smartscrape'
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-sm text-muted-foreground hover:text-foreground transition-colors editorial-underline'
-              >
-                Twitter
-              </a>
-              <a
-                href='https://github.com/smartscrape'
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-sm text-muted-foreground hover:text-foreground transition-colors editorial-underline'
-              >
-                GitHub
-              </a>
-            </div>
           </div>
         </div>
       </div>

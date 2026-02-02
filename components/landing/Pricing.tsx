@@ -56,10 +56,6 @@ export function Pricing() {
           ))}
         </div>
 
-        {/* Bottom note */}
-        <p className='text-center text-sm text-muted-foreground mt-12 animate-fade-up delay-600'>
-          All plans include SSL encryption and GDPR compliance.
-        </p>
       </div>
     </section>
   );

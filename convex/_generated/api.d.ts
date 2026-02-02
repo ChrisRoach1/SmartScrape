@@ -13,6 +13,7 @@ import type * as crons from "../crons.js";
 import type * as firecrawlActions from "../firecrawlActions.js";
 import type * as scrapeLog from "../scrapeLog.js";
 import type * as sourceLibrary from "../sourceLibrary.js";
+import type * as userSettings from "../userSettings.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   firecrawlActions: typeof firecrawlActions;
   scrapeLog: typeof scrapeLog;
   sourceLibrary: typeof sourceLibrary;
+  userSettings: typeof userSettings;
 }>;
 
 /**

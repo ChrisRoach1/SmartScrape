@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
@@ -31,6 +31,7 @@ export default function CompetitorsPage() {
   const [viewingId, setViewingId] = useState<Id<'competitors'> | null>(null);
   const [isViewSummariesOpen, setIsViewSummariesOpen] = useState(false);
   const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const competitors = useQuery(api.competitor.getAll);
   const createCompetitor = useMutation(api.competitor.create);
@@ -38,6 +39,16 @@ export default function CompetitorsPage() {
   const removeCompetitor = useMutation(api.competitor.remove);
   const getAnalysis = useQuery(api.competitor.getAnalysisByCompetitorId, viewingId ? {id:viewingId} :'skip');
 
+  useEffect(() => {
+    scrollRef?.current?.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  }, [currentAnalysisIndex]);
+
+  const handleNavigateAnalysis = (index: number) => {
+    setCurrentAnalysisIndex((prev) => prev + index);
+  };
 
   const form = useForm<z.infer<typeof competitorFormSchema>>({
     resolver: zodResolver(competitorFormSchema),
@@ -266,7 +277,7 @@ export default function CompetitorsPage() {
           }
         }}
       >
-        <DialogContent className='lg:max-w-1/2 max-h-[85vh] overflow-y-auto'>
+        <DialogContent ref={scrollRef} className='lg:max-w-1/2 max-h-[85vh] overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>Competitor Analyses</DialogTitle>
             <DialogDescription>
@@ -311,7 +322,7 @@ export default function CompetitorsPage() {
                   <Button
                     variant='outline'
                     size='sm'
-                    onClick={() => setCurrentAnalysisIndex((prev) => prev - 1)}
+                    onClick={() => handleNavigateAnalysis(-1)}
                     disabled={currentAnalysisIndex === 0}
                   >
                     <ChevronLeft className='h-4 w-4 mr-1' />
@@ -320,7 +331,7 @@ export default function CompetitorsPage() {
                   <Button
                     variant='outline'
                     size='sm'
-                    onClick={() => setCurrentAnalysisIndex((prev) => prev + 1)}
+                    onClick={() => handleNavigateAnalysis(1)}
                     disabled={currentAnalysisIndex === getAnalysis.length - 1}
                   >
                     Next

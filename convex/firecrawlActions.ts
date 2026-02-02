@@ -2,7 +2,7 @@
 
 import { v } from 'convex/values';
 import { action } from './_generated/server';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 import Firecrawl from '@mendable/firecrawl-js';
 import { generateText, generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
@@ -41,17 +41,22 @@ export const startScrape = action({
       }
     }
 
+    const scrapeLog = await ctx.runQuery(api.scrapeLog.getScrapeLog, { id: args.id });
+
+    const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, { userId: scrapeLog?.userId ?? '' });
+
+    const systemPrompt =
+      userSettings?.systemPrompt ??
+      `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` 
+      + `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
+      `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
+
     const combinedContent = scrapedResults.join('NEXT POST');
 
     // Generate the markdown summary
     const { text } = await generateText({
       model: openai('gpt-5-mini'),
-      system:
-        'You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current ' +
-        'market trends, found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive' +
-        'the company you work for is Medpace, a global CRO. You are honest to a fault and do not make things up just in hopes its the' +
-        ' answer that someone is looking for. You give just the facts and suggestions based off those facts',
-
+      system: systemPrompt,
       prompt: `Please layout suggestions and ideas on how to stay competitive in the given market based on the provided 
                articles and blog posts, it must be formatted nicely in markdown.
                Do not ask follow up questions.
@@ -69,13 +74,11 @@ export const startScrape = action({
       model: openai('gpt-5-mini'),
       schema: structuredInsightsSchema,
       system:
-        'You are an expert at extracting structured competitive intelligence insights. ' +
+        'You are an expert at extracting structured insights. ' +
         'Analyze the provided content and extract key information in a structured format. ' +
         'Be concise and specific. Focus on actionable insights.',
-      prompt: `Based on the following competitive intelligence summary, extract structured insights:
-${text}
-Original source content (for additional context):
-${combinedContent.substring(0, 5000)}...`,
+      prompt: `Based on the following summary generated with the following system prompt ${systemPrompt}, extract structured insights:${text}
+      Original source content (for additional context): ${combinedContent.substring(0, 5000)}...`,
     });
 
     await ctx.runMutation(api.scrapeLog.updateLogRecordStatus, { id: args.id, status: 'completed' });

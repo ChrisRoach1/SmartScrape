@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Home, Inbox, LogOut, Library } from 'lucide-react';
+import { Home, Inbox, LogOut, Library, Users, Settings } from 'lucide-react';
 
 import {
   Sidebar,
@@ -38,8 +38,13 @@ const items = [
   {
     title: 'Competitors',
     url: '/dashboard/competitors',
-    icon: Library,
+    icon: Users,
   },  
+  {
+    title: 'Settings',
+    url: '/dashboard/settings',
+    icon: Settings,
+  },    
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -88,7 +93,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className='flex items-center gap-3 p-2'>
             <UserAvatar />
             <div className='flex-1 min-w-0'>
-              <p className='text-sm font-medium truncate'>{user.fullName || 'User'}</p>
+              <p className='text-sm font-medium'>{user.fullName || 'User'}</p>
               <p className='text-xs text-muted-foreground truncate'>{user.primaryEmailAddress?.emailAddress || 'No email'}</p>
             </div>
             <Button variant='ghost' size='icon' className='h-8 w-8 shrink-0' onClick={() => signOut({ redirectUrl: '/' })} title='Sign out'>

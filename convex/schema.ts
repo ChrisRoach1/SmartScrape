@@ -37,4 +37,9 @@ export default defineSchema({
     competitorId: v.id('competitors'),
     analysis: v.string(),
   }).index('by_competitorId', ['competitorId']),
+
+  userSettings: defineTable({
+    userId: v.string(),
+    systemPrompt: v.optional(v.string()),
+  }).index('by_userId', ['userId']),
 });

@@ -1,9 +1,8 @@
 import { v } from 'convex/values';
 import { query, mutation, internalQuery, internalAction, internalMutation } from './_generated/server';
-import { api, internal } from './_generated/api';
+import { internal } from './_generated/api';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { text } from 'stream/consumers';
 
 export const create = mutation({
   args: {
@@ -144,14 +143,17 @@ export const executeScan = internalAction({
 
     await Promise.all(
       competitors.map(async (competitor) => {
+        const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, {userId: competitor.userId});
+
+        const systemPrompt =
+        userSettings?.systemPrompt ??
+        `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` 
+        + `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
+        `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
+  
         const { text } = await generateText({
           model: openai('gpt-5-mini'),
-          system:
-            'You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current ' +
-            'market trends, found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive' +
-            'You are honest to a fault and do not make things up just in hopes its the' +
-            ' answer that someone is looking for. You give just the facts and suggestions based off those facts',
-
+          system: systemPrompt,
           prompt: `Please layout suggestions and ideas on how to stay competitive in the given market based on the following company. 
                        It must be formatted nicely in markdown.
                        Do not ask follow up questions.
