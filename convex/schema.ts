@@ -17,7 +17,12 @@ export default defineSchema({
         topicsIdentified: v.array(v.string()),
       }),
     ),
-  }).index('by_userId', ['userId']),
+  })
+    .index('by_userId', ['userId'])
+    .searchIndex('search_content', {
+      searchField: 'summarizedMarkdown',
+      filterFields: ['userId', 'status'],
+    }),
 
   sourceLibrary: defineTable({
     name: v.string(),

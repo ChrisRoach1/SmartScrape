@@ -87,7 +87,7 @@ export const getScrapeLog = query({
 
 export const getAllLogs = query({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (identity === null) {
       throw new Error('Not authenticated');
@@ -100,5 +100,71 @@ export const getAllLogs = query({
       .withIndex('by_userId', (q) => q.eq('userId', userID))
       .order('desc')
       .collect();
+  },
+});
+
+const statusValidator = v.union(v.literal('processing'), v.literal('completed'), v.literal('failed'));
+const sentimentValidator = v.union(v.literal('positive'), v.literal('negative'), v.literal('neutral'), v.literal('mixed'));
+
+export const searchLogs = query({
+  args: {
+    searchTerm: v.optional(v.string()),
+    status: v.optional(statusValidator),
+    sentiment: v.optional(sentimentValidator),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id('scrapeLog'),
+      _creationTime: v.number(),
+      title: v.optional(v.string()),
+      userId: v.string(),
+      urls: v.array(v.string()),
+      status: statusValidator,
+      summarizedMarkdown: v.optional(v.string()),
+      structuredInsights: v.optional(
+        v.object({
+          keyFindings: v.array(v.string()),
+          companiesMentioned: v.array(v.string()),
+          actionItems: v.array(v.string()),
+          sentiment: sentimentValidator,
+          topicsIdentified: v.array(v.string()),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error('Not authenticated');
+    }
+
+    const userId = identity.tokenIdentifier.split('|')[1];
+
+    let results;
+
+    // Use search index if search term provided, otherwise use regular index
+    if (args.searchTerm && args.searchTerm.trim() !== '') {
+      results = await ctx.db
+        .query('scrapeLog')
+        .withSearchIndex('search_content', (q) => q.search('summarizedMarkdown', args.searchTerm!).eq('userId', userId))
+        .collect();
+    } else {
+      results = await ctx.db
+        .query('scrapeLog')
+        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .order('desc')
+        .collect();
+    }
+
+    // Apply additional filters
+    if (args.status) {
+      results = results.filter((r) => r.status === args.status);
+    }
+    if (args.sentiment) {
+      results = results.filter((r) => r.structuredInsights?.sentiment === args.sentiment);
+    }
+
+    // Sort by creation time descending (search results may not be ordered)
+    return results.sort((a, b) => b._creationTime - a._creationTime);
   },
 });
