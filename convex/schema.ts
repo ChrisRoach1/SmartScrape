@@ -6,6 +6,7 @@ export default defineSchema({
     title: v.optional(v.string()),
     userId: v.string(),
     urls: v.array(v.string()),
+    modelToRun: v.optional(v.string()),
     status: v.union(v.literal('processing'), v.literal('completed'), v.literal('failed')),
     summarizedMarkdown: v.optional(v.string()),
     structuredInsights: v.optional(
@@ -47,4 +48,16 @@ export default defineSchema({
     userId: v.string(),
     systemPrompt: v.optional(v.string()),
   }).index('by_userId', ['userId']),
+
+  usage: defineTable({
+    userId: v.string(),
+    month: v.string(),
+    summaryCount: v.number(),
+  }).index('by_userId_and_month', ['userId', 'month']),
+
+  models: defineTable({
+    displayName: v.string(),
+    code: v.string(),
+    description: v.string(),
+  }),
 });

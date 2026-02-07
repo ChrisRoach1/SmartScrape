@@ -1,42 +1,45 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PlusIcon, XIcon, Loader2, Copy, Library, Save } from 'lucide-react';
+import { PlusIcon, XIcon, Library, Info } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrapeLogViewer } from '@/components/scrape-log-viewer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@clerk/clerk-react';
+import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
 
 const formSchema = z.object({
   link: z.union([z.literal(''), z.url()]),
-  title: z.string(),
+  title: z.string().min(1),
   instructions: z.string().optional(),
+  modelToUse: z.string().optional(),
 });
 
 const MAX_LINKS = 10;
 
 export default function SummarizePage() {
   const [links, updateLinks] = useState<string[] | null>(null);
-  const [scrapeLogId, updateScrapeLogId] = useState<Id<'scrapeLog'> | null>(null);
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-  const [saveSourceName, setSaveSourceName] = useState('');
-  const [saveSourceDescription, setSaveSourceDescription] = useState('');
+
+  const { has } = useAuth();
+  let hasPremiumAccess = false;
+
+  if (has) {
+    hasPremiumAccess = has({ plan: 'pro' });
+  }
 
   const createCrawlLog = useMutation(api.scrapeLog.createLogRecord);
-  const crawlLog = useQuery(api.scrapeLog.getScrapeLog, scrapeLogId ? { id: scrapeLogId } : 'skip');
   const sources = useQuery(api.sourceLibrary.getAll);
-  const createSource = useMutation(api.sourceLibrary.create);
+  const models = useQuery(api.models.getAllModels);
 
   const linkForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,14 +79,22 @@ export default function SummarizePage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (links) {
-      const id = await createCrawlLog({ urls: links, title: values.title, instructions: values.instructions });
-      updateScrapeLogId(id);
+      const id = await createCrawlLog({
+        urls: links,
+        title: values.title,
+        instructions: values.instructions,
+        isPro: hasPremiumAccess,
+        modelToRun: hasPremiumAccess ? values.modelToUse : undefined,
+      });
     }
 
+    toast.success("You're summary is generating check the home page to see the status!");
     linkForm.reset();
+    updateLinks([]);
   }
 
   function handleLinkAdd() {
+    console.log(linkForm.formState);
     const link = linkForm.getValues().link;
 
     if (link) {
@@ -107,17 +118,6 @@ export default function SummarizePage() {
     }
   }
 
-  async function handleCopy() {
-    try {
-      if (crawlLog?.summarizedMarkdown) {
-        await navigator.clipboard.writeText(crawlLog?.summarizedMarkdown);
-        toast('Copied to clipboard!');
-      }
-    } catch {
-      toast('Failed to copy');
-    }
-  }
-
   function handleLoadSource(sourceId: string) {
     const source = sources?.find((s) => s._id === sourceId);
     if (source) {
@@ -126,36 +126,10 @@ export default function SummarizePage() {
     }
   }
 
-  async function handleSaveSource() {
-    if (!saveSourceName.trim()) {
-      toast.error('Name is required');
-      return;
-    }
-
-    if (!crawlLog?.urls || crawlLog.urls.length === 0) {
-      toast.error('No URLs to save');
-      return;
-    }
-
-    try {
-      await createSource({
-        name: saveSourceName,
-        description: saveSourceDescription || undefined,
-        urls: crawlLog.urls,
-      });
-      toast.success('Source saved successfully');
-      setIsSaveDialogOpen(false);
-      setSaveSourceName('');
-      setSaveSourceDescription('');
-    } catch {
-      toast.error('Failed to save source');
-    }
-  }
-
   return (
     <div>
       {/* Load from Sources dropdown */}
-      {sources && sources.length > 0 && !crawlLog && (
+      {sources && sources.length > 0 && (
         <div className='mb-4'>
           <div className='flex items-center gap-2'>
             <Library className='h-4 w-4 text-muted-foreground' />
@@ -179,12 +153,7 @@ export default function SummarizePage() {
         {links?.map((item) => (
           <Badge key={item} className='gap-1' variant={'secondary'}>
             {item}
-            <Button
-              disabled={crawlLog !== undefined}
-              variant={'secondary'}
-              className='h-3 w-3 cursor-pointer hover:text-destructive'
-              onClick={() => removeLink(item)}
-            >
+            <Button variant={'secondary'} className='h-3 w-3 cursor-pointer hover:text-destructive' onClick={() => removeLink(item)}>
               <XIcon />
             </Button>
           </Badge>
@@ -194,24 +163,21 @@ export default function SummarizePage() {
       <Form {...linkForm}>
         <form onSubmit={linkForm.handleSubmit(onSubmit)}>
           <div className='space-x-8 flex flex-row'>
-            <FormField
-              control={linkForm.control}
+            <Controller
               name='link'
-              disabled={crawlLog !== undefined}
-              render={({ field }) => (
-                <FormItem className='flex-2'>
-                  <FormControl>
-                    <Input placeholder='https://google.com' {...field} />
-                  </FormControl>
-                  <FormMessage />
+              control={linkForm.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <Input {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder='https://google.com' />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   <p className='text-xs text-gray-400'>
                     {links?.length ?? 0}/{MAX_LINKS}
                   </p>
-                </FormItem>
+                </Field>
               )}
             />
             <Button
-              disabled={crawlLog !== undefined || (links !== null && links.length >= MAX_LINKS)}
+              disabled={links !== null && links.length >= MAX_LINKS}
               variant={'outline'}
               size='icon'
               type='button'
@@ -224,95 +190,82 @@ export default function SummarizePage() {
           <hr className='mt-2 mb-2 text-gray-300' />
 
           <div className='grid w-full gap-2'>
-            <FormField
-              control={linkForm.control}
+            <Controller
               name='title'
-              disabled={crawlLog !== undefined}
-              render={({ field }) => (
-                <FormItem className=''>
-                  <FormControl>
-                    <Input placeholder='Enter title for this scrape...' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
               control={linkForm.control}
-              name='instructions'
-              disabled={crawlLog !== undefined}
-              render={({ field }) => (
-                <FormItem className=''>
-                  <FormControl>
-                    <Textarea className='h-44' placeholder='Enter additional instructions for summarization... (optional)' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Title</FieldLabel>
+                  <Input {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder='Enter title for this scrape...' />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
               )}
             />
-            <Button disabled={links === null || crawlLog !== undefined || !linkForm.formState.isValid} type='submit'>
+
+            <Controller
+              name='instructions'
+              control={linkForm.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Instructions</FieldLabel>
+                  <Textarea
+                    {...field}
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    className='h-44'
+                    placeholder='Enter additional instructions for summarization... (optional)'
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            {hasPremiumAccess && (
+              <div className='space-y-1'>
+                <Controller
+                  name='modelToUse'
+                  control={linkForm.control}
+                  render={({ field, fieldState }) => (
+                    <Field orientation='responsive' data-invalid={fieldState.invalid}>
+                      <FieldContent>
+                        <FieldLabel htmlFor='form-rhf-select-language'>Model</FieldLabel>
+                        {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                      </FieldContent>
+                      <Select name={field.name} value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id='form-rhf-select-language' aria-invalid={fieldState.invalid} className='min-w-[120px]'>
+                          <SelectValue placeholder='Select a model...' />
+                        </SelectTrigger>
+                        <SelectContent position='item-aligned'>
+                          {models?.map((model) => (
+                            <SelectItem key={model.code} value={model.code}>
+                              <div className='flex items-center gap-2'>
+                                <span>{model.displayName}</span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant='ghost' size='icon-sm'>
+                                      <Info className='h-3.5 w-3.5 text-muted-foreground' />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{model.description}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+                />
+              </div>
+            )}
+            <Button disabled={!links || links.length === 0 || !linkForm.watch('title')} type='submit'>
               Generate
             </Button>
           </div>
         </form>
       </Form>
-
-      {crawlLog && crawlLog.status === 'processing' && (
-        <div className='mt-4 flex items-center justify-center'>
-          <Loader2 className='h-8 w-8 animate-spin text-primary' />
-        </div>
-      )}
-
-      {crawlLog && crawlLog.status === 'completed' && (
-        <div className='mt-4'>
-          <div className='flex flex-row-reverse gap-2 mb-3'>
-            <Button onClick={handleCopy} variant='outline'>
-              <Copy className='h-4 w-4' />
-            </Button>
-            <Button onClick={() => setIsSaveDialogOpen(true)} variant='outline'>
-              <Save className='h-4 w-4 mr-2' />
-              Save as Source
-            </Button>
-          </div>
-
-          <ScrapeLogViewer summarizedMarkdown={crawlLog.summarizedMarkdown} structuredInsights={crawlLog.structuredInsights} />
-        </div>
-      )}
-
-      {/* Save as Source Dialog */}
-      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save as Source</DialogTitle>
-            <DialogDescription>Save these URLs as a source set for quick reuse in future analyses.</DialogDescription>
-          </DialogHeader>
-          <div className='space-y-4'>
-            <div>
-              <label className='text-sm font-medium'>Name</label>
-              <Input
-                placeholder='e.g., Q4 Competitor Analysis'
-                value={saveSourceName}
-                onChange={(e) => setSaveSourceName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className='text-sm font-medium'>Description (optional)</label>
-              <Textarea
-                placeholder='Notes about this source set...'
-                value={saveSourceDescription}
-                onChange={(e) => setSaveSourceDescription(e.target.value)}
-              />
-            </div>
-            <div className='text-sm text-muted-foreground'>{crawlLog?.urls.length} URL(s) will be saved</div>
-          </div>
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setIsSaveDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveSource}>Save Source</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -25,9 +25,11 @@ export const startScrape = action({
     id: v.id('scrapeLog'),
     urls: v.array(v.string()),
     instructions: v.optional(v.string()),
+    modelToRun: v.optional(v.string()),
   },
 
   handler: async (ctx, args) => {
+    const selectedModel = args.modelToRun ?? 'gpt-5-mini';
     const firecrawl = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
     const scrapedResults = new Array<string>();
     const additionalInstructionsPrompt = `the following are user provided instructions in addition to your current instructions.
@@ -41,21 +43,21 @@ export const startScrape = action({
       }
     }
 
-    const scrapeLog = await ctx.runQuery(api.scrapeLog.getScrapeLog, { id: args.id });
+    const scrapeLog = await ctx.runQuery(internal.scrapeLog.getScrapeLogInternal, { id: args.id });
 
     const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, { userId: scrapeLog?.userId ?? '' });
 
     const systemPrompt =
       userSettings?.systemPrompt ??
-      `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` 
-      + `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
-      `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
+      `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` +
+        `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
+        `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
 
     const combinedContent = scrapedResults.join('NEXT POST');
 
     // Generate the markdown summary
     const { text } = await generateText({
-      model: openai('gpt-5-mini'),
+      model: openai(selectedModel),
       system: systemPrompt,
       prompt: `Please layout suggestions and ideas on how to stay competitive in the given market based on the provided 
                articles and blog posts, it must be formatted nicely in markdown.
@@ -71,7 +73,7 @@ export const startScrape = action({
 
     // Extract structured insights from the generated summary
     const { object: structuredInsights } = await generateObject({
-      model: openai('gpt-5-mini'),
+      model: openai('o3'),
       schema: structuredInsightsSchema,
       system:
         'You are an expert at extracting structured insights. ' +

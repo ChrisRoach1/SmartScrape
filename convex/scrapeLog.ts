@@ -1,5 +1,5 @@
 import { v } from 'convex/values';
-import { query, mutation } from './_generated/server';
+import { query, mutation, internalQuery } from './_generated/server';
 import { api } from './_generated/api';
 
 export const createLogRecord = mutation({
@@ -7,6 +7,8 @@ export const createLogRecord = mutation({
     urls: v.array(v.string()),
     title: v.optional(v.string()),
     instructions: v.optional(v.string()),
+    isPro: v.boolean(),
+    modelToRun: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -15,9 +17,35 @@ export const createLogRecord = mutation({
     }
 
     const userID = identity.tokenIdentifier.split('|')[1];
+    const log = await ctx.db.insert('scrapeLog', {
+      urls: args.urls,
+      title: args.title,
+      status: 'processing',
+      userId: userID,
+      modelToRun: args.modelToRun,
+    });
 
-    const log = await ctx.db.insert('scrapeLog', { urls: args.urls, title: args.title, status: 'processing', userId: userID });
-    ctx.scheduler.runAfter(0, api.firecrawlActions.startScrape, { id: log, urls: args.urls, instructions: args.instructions });
+    if (!args.isPro) {
+      const date = new Date();
+      const month = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      const monthlyCount = await ctx.db
+        .query('usage')
+        .withIndex('by_userId_and_month', (q) => q.eq('userId', userID).eq('month', month))
+        .first();
+
+      if (monthlyCount) {
+        await ctx.db.patch(monthlyCount._id, { summaryCount: monthlyCount.summaryCount + 1 });
+      } else {
+        await ctx.db.insert('usage', { userId: userID, month: month, summaryCount: 1 });
+      }
+    }
+
+    ctx.scheduler.runAfter(0, api.firecrawlActions.startScrape, {
+      id: log,
+      urls: args.urls,
+      instructions: args.instructions,
+      modelToRun: args.modelToRun,
+    });
     return log;
   },
 });
@@ -85,6 +113,20 @@ export const getScrapeLog = query({
   },
 });
 
+export const getScrapeLogInternal = internalQuery({
+  args: {
+    id: v.id('scrapeLog'),
+  },
+  handler: async (ctx, args) => {
+    const log = await ctx.db
+      .query('scrapeLog')
+      .withIndex('by_id', (q) => q.eq('_id', args.id))
+      .first();
+
+    return log;
+  },
+});
+
 export const getAllLogs = query({
   args: {},
   handler: async (ctx) => {
@@ -119,6 +161,7 @@ export const searchLogs = query({
       title: v.optional(v.string()),
       userId: v.string(),
       urls: v.array(v.string()),
+      modelToRun: v.optional(v.string()),
       status: statusValidator,
       summarizedMarkdown: v.optional(v.string()),
       structuredInsights: v.optional(

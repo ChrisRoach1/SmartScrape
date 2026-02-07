@@ -14,42 +14,53 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { useUser, useClerk, UserAvatar } from '@clerk/clerk-react';
+import { useUser, useClerk, UserAvatar, useAuth, SignedIn, UserButton } from '@clerk/clerk-react';
+import { SubscriptionDetailsButton } from '@clerk/clerk-react/experimental';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Menu items.
-const items = [
-  {
-    title: 'Home',
-    url: '/dashboard',
-    icon: Home,
-  },
-  {
-    title: 'Summarize',
-    url: '/dashboard/summarize',
-    icon: Inbox,
-  },
-  {
-    title: 'Sources',
-    url: '/dashboard/sources',
-    icon: Library,
-  },
-  {
-    title: 'Competitors',
-    url: '/dashboard/competitors',
-    icon: Users,
-  },  
-  {
-    title: 'Settings',
-    url: '/dashboard/settings',
-    icon: Settings,
-  },    
-];
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, isLoaded } = useUser();
+  const { has } = useAuth();
+  let hasPremiumAccess = false;
   const { signOut } = useClerk();
+
+  if (has) {
+    hasPremiumAccess = has({ plan: 'pro' });
+  }
+
+  const items = [
+    {
+      title: 'Home',
+      url: '/dashboard',
+      icon: Home,
+      visible: true,
+    },
+    {
+      title: 'Summarize',
+      url: '/dashboard/summarize',
+      icon: Inbox,
+      visible: true,
+    },
+    {
+      title: 'Sources',
+      url: '/dashboard/sources',
+      icon: Library,
+      visible: true,
+    },
+    {
+      title: 'Competitors',
+      url: '/dashboard/competitors',
+      icon: Users,
+      visible: hasPremiumAccess,
+    },
+    {
+      title: 'Settings',
+      url: '/dashboard/settings',
+      icon: Settings,
+      visible: true,
+    },
+  ];
 
   return (
     <Sidebar variant='floating' {...props}>
@@ -67,16 +78,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {items.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
-                  <Link href={item.url}>
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {items
+              .filter((x) => x.visible)
+              .map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <Link href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -91,7 +104,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         ) : user ? (
           <div className='flex items-center gap-3 p-2'>
-            <UserAvatar />
+            <UserButton />
             <div className='flex-1 min-w-0'>
               <p className='text-sm font-medium'>{user.fullName || 'User'}</p>
               <p className='text-xs text-muted-foreground truncate'>{user.primaryEmailAddress?.emailAddress || 'No email'}</p>
