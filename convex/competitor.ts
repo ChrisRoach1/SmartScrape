@@ -3,6 +3,7 @@ import { query, mutation, internalQuery, internalAction, internalMutation } from
 import { internal } from './_generated/api';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { createClerkClient } from '@clerk/nextjs/server';
 
 export const create = mutation({
   args: {
@@ -131,44 +132,6 @@ export const getAnalysisByCompetitorId = query({
       .withIndex('by_competitorId', (q) => q.eq('competitorId', args.id))
       .order('desc')
       .collect();
-  },
-});
-
-export const executeScan = internalAction({
-  args: {
-    scanFrequency: v.union(v.literal('w'), v.literal('m')),
-  },
-  handler: async (ctx, args) => {
-    const competitors = await ctx.runQuery(internal.competitor.getByFrequency, { scanFrequency: args.scanFrequency });
-
-    await Promise.all(
-      competitors.map(async (competitor) => {
-        const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, {userId: competitor.userId});
-
-        const systemPrompt =
-        userSettings?.systemPrompt ??
-        `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` 
-        + `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
-        `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
-  
-        const { text } = await generateText({
-          model: openai('gpt-5-mini'),
-          system: systemPrompt,
-          prompt: `Please layout suggestions and ideas on how to stay competitive in the given market based on the following company. 
-                       It must be formatted nicely in markdown.
-                       Do not ask follow up questions.
-                       You are free to search the web for more info if but be sure to include your sources ON ALL INFO. 
-                       Company name: ${competitor.name}. ${competitor.lastScannedOn ? 'The info must also be newer than' + competitor.lastScannedOn : ''}`,
-          tools: {
-            web_search: openai.tools.webSearch(),
-          },
-        });
-
-        await ctx.runMutation(internal.competitor.createNewCompetitorAnalysis, { competitorId: competitor._id, text });
-
-        await ctx.runMutation(internal.competitor.updateLastScannedDate, { competitorId: competitor._id, date: Date.now() });
-      }),
-    );
   },
 });
 

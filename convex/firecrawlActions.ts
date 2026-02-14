@@ -1,12 +1,14 @@
 'use node';
 
 import { v } from 'convex/values';
-import { action } from './_generated/server';
+import { action, internalAction } from './_generated/server';
 import { api, internal } from './_generated/api';
 import Firecrawl from '@mendable/firecrawl-js';
 import { generateText, generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
+import { createClerkClient, User } from '@clerk/nextjs/server';
+import { error } from 'console';
 
 const structuredInsightsSchema = z.object({
   keyFindings: z.array(z.string()).describe('3-5 key takeaways or findings from the analyzed content'),
@@ -18,6 +20,98 @@ const structuredInsightsSchema = z.object({
   topicsIdentified: z
     .array(z.string())
     .describe('Key topics or themes identified (e.g., "pricing", "product launch", "regulation", "partnerships")'),
+});
+
+export const executeScan = internalAction({
+  args: {
+    scanFrequency: v.union(v.literal('w'), v.literal('m')),
+  },
+  handler: async (ctx, args) => {
+    const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
+    const userList = await clerkClient.users.getUserList();
+
+    const proUserList: string[] = [];
+    const freeUserList: string[] = [];
+
+    await Promise.all(
+      userList.data.map(async (x) => {
+        const billingInfo = await clerkClient.billing.getUserBillingSubscription(x.id);
+
+        if (billingInfo.subscriptionItems[0].plan?.name === 'Pro') {
+          proUserList.push(x.id);
+        } else {
+          freeUserList.push(x.id);
+        }
+      }),
+    );
+
+    const competitors = await ctx.runQuery(internal.competitor.getByFrequency, { scanFrequency: args.scanFrequency });
+
+    await Promise.all(
+      competitors
+        .filter((x) => proUserList.indexOf(x.userId) > -1)
+        .map(async (competitor) => {
+          console.log('starting high priority competitor scanning');
+          const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, { userId: competitor.userId });
+
+          const systemPrompt =
+            userSettings?.systemPrompt ??
+            `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` +
+              `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
+              `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
+
+          const { text } = await generateText({
+            model: openai('gpt-5-mini'),
+            system: systemPrompt,
+            prompt: `Please layout suggestions and ideas on how to stay competitive in the given market based on the following company. 
+                       It must be formatted nicely in markdown.
+                       Do not ask follow up questions.
+                       You are free to search the web for more info if but be sure to include your sources ON ALL INFO. 
+                       Company name: ${competitor.name}. ${competitor.lastScannedOn ? 'The info must also be newer than' + competitor.lastScannedOn : ''}`,
+            tools: {
+              web_search: openai.tools.webSearch(),
+            },
+          });
+
+          await ctx.runMutation(internal.competitor.createNewCompetitorAnalysis, { competitorId: competitor._id, text });
+
+          await ctx.runMutation(internal.competitor.updateLastScannedDate, { competitorId: competitor._id, date: Date.now() });
+        }),
+    );
+
+    await Promise.all(
+      competitors
+        .filter((x) => freeUserList.indexOf(x.userId) > -1)
+        .map(async (competitor) => {
+          console.log('starting standard priority competitor scanning');
+          const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, { userId: competitor.userId });
+
+          const systemPrompt =
+            userSettings?.systemPrompt ??
+            `You are part of a company initiative called "competitive intelligence" youre tasked with reviewing current market trends,` +
+              `found in the numerous blogs/articles found below, and laying out suggestions on how to stay competitive.` +
+              `You are honest to a fault and do not make things up just in hopes its the answer that someone is looking for. You give just the facts and suggestions based off those facts`;
+
+          const { text } = await generateText({
+            model: openai('gpt-5-mini'),
+            system: systemPrompt,
+            prompt: `Please layout suggestions and ideas on how to stay competitive in the given market based on the following company. 
+                       It must be formatted nicely in markdown.
+                       Do not ask follow up questions.
+                       You are free to search the web for more info if but be sure to include your sources ON ALL INFO. 
+                       Company name: ${competitor.name}. ${competitor.lastScannedOn ? 'The info must also be newer than' + competitor.lastScannedOn : ''}`,
+            tools: {
+              web_search: openai.tools.webSearch(),
+            },
+          });
+
+          await ctx.runMutation(internal.competitor.createNewCompetitorAnalysis, { competitorId: competitor._id, text });
+
+          await ctx.runMutation(internal.competitor.updateLastScannedDate, { competitorId: competitor._id, date: Date.now() });
+        }),
+    );
+  },
 });
 
 export const startScrape = action({

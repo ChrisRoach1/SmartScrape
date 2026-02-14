@@ -36,7 +36,7 @@ export const createLogRecord = mutation({
       if (monthlyCount) {
         await ctx.db.patch(monthlyCount._id, { summaryCount: monthlyCount.summaryCount + 1 });
       } else {
-        await ctx.db.insert('usage', { userId: userID, month: month, summaryCount: 1 });
+        await ctx.db.insert('usage', { userId: userID, month: month, summaryCount: 1, competitorCount: 0 });
       }
     }
 

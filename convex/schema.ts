@@ -53,6 +53,7 @@ export default defineSchema({
     userId: v.string(),
     month: v.string(),
     summaryCount: v.number(),
+    competitorCount: v.number(),
   }).index('by_userId_and_month', ['userId', 'month']),
 
   models: defineTable({
