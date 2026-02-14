@@ -18,13 +18,15 @@ import { toast } from 'sonner';
 import { ScrapeLogViewer } from '@/components/scrape-log-viewer';
 import { DataTable } from '../data-table';
 import { competitorColumns } from './columns';
-import { Protect } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-react';
 import { ProUpgradeFallback } from '@/components/pro-upgrade-fallback';
 
 const competitorFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   frequency: z.union([z.literal('w'), z.literal('m')]),
 });
+
+const COMPETITOR_LIMIT = 5;
 
 export default function CompetitorsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -33,9 +35,17 @@ export default function CompetitorsPage() {
   const [viewingId, setViewingId] = useState<Id<'competitors'> | null>(null);
   const [isViewSummariesOpen, setIsViewSummariesOpen] = useState(false);
   const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState(0);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const { has } = useAuth();
+  const hasPremiumAccess = has?.({ plan: 'pro' }) ?? false;
+
   const competitors = useQuery(api.competitor.getAll);
+  const usage = useQuery(api.usage.getUsage);
+
+  const competitorCount = usage?.competitorCount ?? 0;
+  const hasReachedLimit = !hasPremiumAccess && competitorCount >= COMPETITOR_LIMIT;
   const createCompetitor = useMutation(api.competitor.create);
   const updateCompetitor = useMutation(api.competitor.update);
   const removeCompetitor = useMutation(api.competitor.remove);
@@ -179,18 +189,36 @@ export default function CompetitorsPage() {
   }
 
   return (
-    <Protect
-      plan={'pro'}
-      fallback={
-        <ProUpgradeFallback
-          featureName='Competitor Tracking'
-          description='Track and analyze your competitors with automated scanning and AI-powered insights.'
-        />
-      }
-    >
-      <div className='container mx-auto'>
-        <div className='flex mb-6 flex-row-reverse'>
-          <Dialog
+    <div className='container mx-auto'>
+      {!hasPremiumAccess && (
+        <div className='mb-4'>
+          <p className='text-sm text-muted-foreground'>
+            {competitorCount}/{COMPETITOR_LIMIT} competitor analyses used this month
+          </p>
+          {hasReachedLimit && (
+            <div className='mt-2 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800'>
+              You have reached your monthly limit of {COMPETITOR_LIMIT} competitor analyses.{' '}
+              <Dialog open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen}>
+                <DialogTrigger asChild>
+                  <button type='button' className='font-medium underline hover:no-underline'>
+                    Upgrade to Pro
+                  </button>
+                </DialogTrigger>
+                <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
+                <DialogTitle>Upgrade</DialogTitle>
+                  <ProUpgradeFallback
+                    featureName='Competitor Tracking'
+                    description='Upgrade to Pro for unlimited competitor analyses.'
+                  />
+                </DialogContent>
+              </Dialog>{' '}
+              for unlimited competitor tracking.
+            </div>
+          )}
+        </div>
+      )}
+      <div className='flex mb-6 flex-row-reverse'>
+        <Dialog
             open={isCreateOpen}
             onOpenChange={(open) => {
               setIsCreateOpen(open);
@@ -198,7 +226,7 @@ export default function CompetitorsPage() {
             }}
           >
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={hasReachedLimit}>
                 <Plus className='h-4 w-4 mr-2' />
                 New Competitor
               </Button>
@@ -262,7 +290,7 @@ export default function CompetitorsPage() {
           <div className='text-center py-12 border rounded-lg'>
             <h3 className='text-lg font-medium mb-2'>No competitors yet</h3>
             <p className='text-muted-foreground mb-4'>Add your first competitor to start tracking and analyzing them.</p>
-            <Button onClick={() => setIsCreateOpen(true)}>
+            <Button onClick={() => setIsCreateOpen(true)} disabled={hasReachedLimit}>
               <Plus className='h-4 w-4 mr-2' />
               Add Your First Competitor
             </Button>
@@ -406,7 +434,6 @@ export default function CompetitorsPage() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
-    </Protect>
+    </div>
   );
 }

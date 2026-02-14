@@ -10,7 +10,7 @@ const features = [
   {
     icon: FileText,
     title: 'Structured Output',
-    description: 'Receive clean Markdown, JSON, or CSV—ready for your workflow.',
+    description: 'Receive clean Markdown ready for your workflow.',
   },
   {
     icon: Zap,

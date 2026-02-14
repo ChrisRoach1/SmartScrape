@@ -7,8 +7,7 @@ import Firecrawl from '@mendable/firecrawl-js';
 import { generateText, generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
-import { createClerkClient, User } from '@clerk/nextjs/server';
-import { error } from 'console';
+import { createClerkClient } from '@clerk/nextjs/server';
 
 const structuredInsightsSchema = z.object({
   keyFindings: z.array(z.string()).describe('3-5 key takeaways or findings from the analyzed content'),
@@ -85,7 +84,13 @@ export const executeScan = internalAction({
         .filter((x) => freeUserList.indexOf(x.userId) > -1)
         .map(async (competitor) => {
           console.log('starting standard priority competitor scanning');
+          const usage = await ctx.runQuery(internal.usage.getUsageInternal, { userId: competitor.userId })
           const userSettings = await ctx.runQuery(internal.userSettings.getByUserId, { userId: competitor.userId });
+
+          if(usage && usage?.competitorCount >= 5){
+            console.log('monthly limit reached')
+            return;
+          }
 
           const systemPrompt =
             userSettings?.systemPrompt ??
@@ -105,6 +110,10 @@ export const executeScan = internalAction({
               web_search: openai.tools.webSearch(),
             },
           });
+
+          if(userSettings?.userId){
+            await ctx.runMutation(internal.usage.incrementAnalysisCount, {userId: userSettings?.userId});
+          }
 
           await ctx.runMutation(internal.competitor.createNewCompetitorAnalysis, { competitorId: competitor._id, text });
 

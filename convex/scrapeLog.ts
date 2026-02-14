@@ -1,6 +1,6 @@
 import { v } from 'convex/values';
 import { query, mutation, internalQuery } from './_generated/server';
-import { api } from './_generated/api';
+import { api, internal } from './_generated/api';
 
 export const createLogRecord = mutation({
   args: {
@@ -26,18 +26,7 @@ export const createLogRecord = mutation({
     });
 
     if (!args.isPro) {
-      const date = new Date();
-      const month = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      const monthlyCount = await ctx.db
-        .query('usage')
-        .withIndex('by_userId_and_month', (q) => q.eq('userId', userID).eq('month', month))
-        .first();
-
-      if (monthlyCount) {
-        await ctx.db.patch(monthlyCount._id, { summaryCount: monthlyCount.summaryCount + 1 });
-      } else {
-        await ctx.db.insert('usage', { userId: userID, month: month, summaryCount: 1, competitorCount: 0 });
-      }
+      await ctx.runMutation(internal.usage.incrementSummaryCount, {userId: userID});
     }
 
     ctx.scheduler.runAfter(0, api.firecrawlActions.startScrape, {

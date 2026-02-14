@@ -52,7 +52,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: 'Competitors',
       url: '/dashboard/competitors',
       icon: Users,
-      visible: hasPremiumAccess,
+      visible: true,
     },
     {
       title: 'Settings',

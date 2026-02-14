@@ -22,7 +22,7 @@ export function Footer() {
           <div className='md:col-span-7'>
             <div className='grid grid-cols-2 sm:grid-cols-3 gap-8'>
               <div>
-                <h4 className='text-sm tracking-[0.1em] uppercase text-muted-foreground font-medium mb-4'>
+                <h4 className='text-sm tracking-widest uppercase text-muted-foreground font-medium mb-4'>
                   Product
                 </h4>
                 <ul className='space-y-3'>
@@ -31,8 +31,8 @@ export function Footer() {
                   <FooterLink href='#how-it-works'>How It Works</FooterLink>
                 </ul>
               </div>
-              <div>
-                <h4 className='text-sm tracking-[0.1em] uppercase text-muted-foreground font-medium mb-4'>
+              {/* <div>
+                <h4 className='text-sm tracking-widest uppercase text-muted-foreground font-medium mb-4'>
                   Company
                 </h4>
                 <ul className='space-y-3'>
@@ -42,14 +42,14 @@ export function Footer() {
                 </ul>
               </div>
               <div>
-                <h4 className='text-sm tracking-[0.1em] uppercase text-muted-foreground font-medium mb-4'>
+                <h4 className='text-sm tracking-widest uppercase text-muted-foreground font-medium mb-4'>
                   Legal
                 </h4>
                 <ul className='space-y-3'>
                   <FooterLink href='/privacy'>Privacy</FooterLink>
                   <FooterLink href='/terms'>Terms</FooterLink>
                 </ul>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

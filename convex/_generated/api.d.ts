@@ -14,6 +14,7 @@ import type * as firecrawlActions from "../firecrawlActions.js";
 import type * as models from "../models.js";
 import type * as scrapeLog from "../scrapeLog.js";
 import type * as sourceLibrary from "../sourceLibrary.js";
+import type * as usage from "../usage.js";
 import type * as userSettings from "../userSettings.js";
 
 import type {
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   models: typeof models;
   scrapeLog: typeof scrapeLog;
   sourceLibrary: typeof sourceLibrary;
+  usage: typeof usage;
   userSettings: typeof userSettings;
 }>;
 

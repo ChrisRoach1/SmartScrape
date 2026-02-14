@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@clerk/clerk-react';
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ProUpgradeFallback } from '@/components/pro-upgrade-fallback';
 
 const formSchema = z.object({
   link: z.union([z.literal(''), z.url()]),
@@ -26,9 +28,11 @@ const formSchema = z.object({
 });
 
 const MAX_LINKS = 10;
+const SUMMARY_LIMIT = 10;
 
 export default function SummarizePage() {
   const [links, updateLinks] = useState<string[] | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const { has } = useAuth();
   let hasPremiumAccess = false;
@@ -40,6 +44,10 @@ export default function SummarizePage() {
   const createCrawlLog = useMutation(api.scrapeLog.createLogRecord);
   const sources = useQuery(api.sourceLibrary.getAll);
   const models = useQuery(api.models.getAllModels);
+  const usage = useQuery(api.usage.getUsage);
+
+  const summaryCount = usage?.summaryCount ?? 0;
+  const hasReachedLimit = !hasPremiumAccess && summaryCount >= SUMMARY_LIMIT;
 
   const linkForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -260,7 +268,32 @@ export default function SummarizePage() {
                 />
               </div>
             )}
-            <Button disabled={!links || links.length === 0 || !linkForm.watch('title')} type='submit'>
+            {!hasPremiumAccess && (
+              <p className='text-sm text-muted-foreground'>
+                {summaryCount}/{SUMMARY_LIMIT} summaries used this month
+              </p>
+            )}
+            {hasReachedLimit && (
+              <div className='rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800'>
+                You have reached your monthly limit of {SUMMARY_LIMIT} summaries.{' '}
+                <Dialog open={isUpgradeModalOpen} onOpenChange={setIsUpgradeModalOpen}>
+                  <DialogTrigger asChild>
+                    <button type='button' className='font-medium underline hover:no-underline'>
+                      Upgrade to Pro
+                    </button>
+                  </DialogTrigger>
+                  <DialogTitle>Upgrade</DialogTitle>
+                  <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
+                    <ProUpgradeFallback
+                      featureName='Summaries'
+                      description='Upgrade to Pro for unlimited summaries.'
+                    />
+                  </DialogContent>
+                </Dialog>{' '}
+                for unlimited summaries.
+              </div>
+            )}
+            <Button disabled={!links || links.length === 0 || !linkForm.watch('title') || hasReachedLimit} type='submit'>
               Generate
             </Button>
           </div>
