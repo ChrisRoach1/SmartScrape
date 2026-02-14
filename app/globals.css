@@ -252,6 +252,34 @@
   opacity: 0;
 }
 
+@keyframes settings-attention {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.55 0.14 35 / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 4px oklch(0.55 0.14 35 / 0.08);
+  }
+}
+
+.animate-settings-attention {
+  animation: settings-attention 2s ease-in-out infinite;
+}
+
+.dark .animate-settings-attention {
+  animation-name: settings-attention-dark;
+}
+
+@keyframes settings-attention-dark {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(0.68 0.14 35 / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 4px oklch(0.68 0.14 35 / 0.08);
+  }
+}
+
 .delay-100 {
   animation-delay: 100ms;
 }

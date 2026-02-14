@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Home, Inbox, LogOut, Library, Users, Settings } from 'lucide-react';
+import { useQuery } from 'convex/react';
 
 import {
   Sidebar,
@@ -14,20 +15,18 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { useUser, useClerk, UserAvatar, useAuth, SignedIn, UserButton } from '@clerk/clerk-react';
-import { SubscriptionDetailsButton } from '@clerk/clerk-react/experimental';
+import { useUser, useClerk, UserButton } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { api } from '@/convex/_generated/api';
+import { cn } from '@/lib/utils';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, isLoaded } = useUser();
-  const { has } = useAuth();
-  let hasPremiumAccess = false;
   const { signOut } = useClerk();
-
-  if (has) {
-    hasPremiumAccess = has({ plan: 'pro' });
-  }
+  const settings = useQuery(api.userSettings.get, {});
+  const settingsNeedsAttention =
+    settings !== undefined && (settings === null || !settings?.systemPrompt?.trim());
 
   const items = [
     {
@@ -82,7 +81,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               .filter((x) => x.visible)
               .map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(
+                      item.title === 'Settings' &&
+                        settingsNeedsAttention &&
+                        'font-semibold animate-settings-attention',
+                    )}
+                  >
                     <Link href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
