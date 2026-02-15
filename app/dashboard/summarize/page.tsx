@@ -135,7 +135,7 @@ export default function SummarizePage() {
   }
 
   return (
-    <div>
+    <div className='animate-fade-up'>
       {/* Load from Sources dropdown */}
       {sources && sources.length > 0 && (
         <div className='mb-4'>
@@ -284,10 +284,7 @@ export default function SummarizePage() {
                   </DialogTrigger>
                   <DialogTitle>Upgrade</DialogTitle>
                   <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
-                    <ProUpgradeFallback
-                      featureName='Summaries'
-                      description='Upgrade to Pro for unlimited summaries.'
-                    />
+                    <ProUpgradeFallback featureName='Summaries' description='Upgrade to Pro for unlimited summaries.' />
                   </DialogContent>
                 </Dialog>{' '}
                 for unlimited summaries.

@@ -189,7 +189,7 @@ export default function CompetitorsPage() {
   }
 
   return (
-    <div className='container mx-auto'>
+    <div className='container mx-auto animate-fade-up'>
       {!hasPremiumAccess && (
         <div className='mb-4'>
           <p className='text-sm text-muted-foreground'>
@@ -205,11 +205,8 @@ export default function CompetitorsPage() {
                   </button>
                 </DialogTrigger>
                 <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
-                <DialogTitle>Upgrade</DialogTitle>
-                  <ProUpgradeFallback
-                    featureName='Competitor Tracking'
-                    description='Upgrade to Pro for unlimited competitor analyses.'
-                  />
+                  <DialogTitle>Upgrade</DialogTitle>
+                  <ProUpgradeFallback featureName='Competitor Tracking' description='Upgrade to Pro for unlimited competitor analyses.' />
                 </DialogContent>
               </Dialog>{' '}
               for unlimited competitor tracking.
@@ -219,175 +216,25 @@ export default function CompetitorsPage() {
       )}
       <div className='flex mb-6 flex-row-reverse'>
         <Dialog
-            open={isCreateOpen}
-            onOpenChange={(open) => {
-              setIsCreateOpen(open);
-              if (!open) resetForm();
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button disabled={hasReachedLimit}>
-                <Plus className='h-4 w-4 mr-2' />
-                New Competitor
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Competitor</DialogTitle>
-                <DialogDescription>Add a new competitor to track and analyze.</DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleCreate)} className='space-y-4'>
-                  <FormField
-                    control={form.control}
-                    name='name'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder='e.g., Acme Corp' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='frequency'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Scan Frequency</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder='Select frequency' />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value='w'>Weekly</SelectItem>
-                            <SelectItem value='m'>Monthly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type='button' variant='outline' onClick={handleCloseCreate}>
-                      Cancel
-                    </Button>
-                    <Button type='submit' disabled={!form.formState.isValid}>
-                      Add Competitor
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {competitors.length === 0 ? (
-          <div className='text-center py-12 border rounded-lg'>
-            <h3 className='text-lg font-medium mb-2'>No competitors yet</h3>
-            <p className='text-muted-foreground mb-4'>Add your first competitor to start tracking and analyzing them.</p>
-            <Button onClick={() => setIsCreateOpen(true)} disabled={hasReachedLimit}>
-              <Plus className='h-4 w-4 mr-2' />
-              Add Your First Competitor
-            </Button>
-          </div>
-        ) : (
-          <DataTable
-            columns={competitorColumns({
-              onEdit: (competitor) => handleEdit(competitor),
-              onDelete: (id) => handleDelete(id),
-              onView: (id) => handleLoadAnalysis(id),
-            })}
-            data={competitors}
-          />
-        )}
-
-        <Dialog
-          open={isViewSummariesOpen}
+          open={isCreateOpen}
           onOpenChange={(open) => {
-            setIsViewSummariesOpen(open);
-            if (!open) {
-              setViewingId(null);
-              setCurrentAnalysisIndex(0);
-            }
-          }}
-        >
-          <DialogContent ref={scrollRef} className='lg:max-w-1/2 max-h-[85vh] overflow-y-auto'>
-            <DialogHeader>
-              <DialogTitle>Competitor Analyses</DialogTitle>
-              <DialogDescription>
-                {getAnalysis && getAnalysis.length > 0
-                  ? `Viewing analysis ${currentAnalysisIndex + 1} of ${getAnalysis.length}`
-                  : 'No analyses available'}
-              </DialogDescription>
-            </DialogHeader>
-
-            {getAnalysis === undefined ? (
-              <div className='flex-1 flex items-center justify-center py-12'>
-                <Skeleton className='h-64 w-full' />
-              </div>
-            ) : getAnalysis.length === 0 ? (
-              <div className='flex-1 flex flex-col items-center justify-center py-12 text-center'>
-                <p className='text-muted-foreground mb-2'>No analyses yet for this competitor.</p>
-                <p className='text-sm text-muted-foreground'>Analyses are generated automatically based on the scan frequency.</p>
-              </div>
-            ) : (
-              <>
-                <p className='text-sm text-muted-foreground'>
-                  Generated on{' '}
-                  {new Date(getAnalysis[currentAnalysisIndex]?._creationTime).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </p>
-                <div className='flex-1 overflow-y-auto min-h-0'>
-                  <ScrapeLogViewer summarizedMarkdown={getAnalysis[currentAnalysisIndex]?.analysis} structuredInsights={null} />
-                </div>
-
-                {getAnalysis.length > 1 && (
-                  <div className='flex items-center justify-between pt-4 border-t'>
-                    <Button variant='outline' size='sm' onClick={() => handleNavigateAnalysis(-1)} disabled={currentAnalysisIndex === 0}>
-                      <ChevronLeft className='h-4 w-4 mr-1' />
-                      Previous
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handleNavigateAnalysis(1)}
-                      disabled={currentAnalysisIndex === getAnalysis.length - 1}
-                    >
-                      Next
-                      <ChevronRight className='h-4 w-4 ml-1' />
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Dialog */}
-        <Dialog
-          open={isEditOpen}
-          onOpenChange={(open) => {
-            setIsEditOpen(open);
+            setIsCreateOpen(open);
             if (!open) resetForm();
           }}
         >
+          <DialogTrigger asChild>
+            <Button disabled={hasReachedLimit}>
+              <Plus className='h-4 w-4 mr-2' />
+              New Competitor
+            </Button>
+          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Competitor</DialogTitle>
-              <DialogDescription>Update this competitors details.</DialogDescription>
+              <DialogTitle>Add Competitor</DialogTitle>
+              <DialogDescription>Add a new competitor to track and analyze.</DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleUpdate)} className='space-y-4'>
+              <form onSubmit={form.handleSubmit(handleCreate)} className='space-y-4'>
                 <FormField
                   control={form.control}
                   name='name'
@@ -407,7 +254,7 @@ export default function CompetitorsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Scan Frequency</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder='Select frequency' />
@@ -423,17 +270,167 @@ export default function CompetitorsPage() {
                   )}
                 />
                 <DialogFooter>
-                  <Button type='button' variant='outline' onClick={handleCloseEdit}>
+                  <Button type='button' variant='outline' onClick={handleCloseCreate}>
                     Cancel
                   </Button>
                   <Button type='submit' disabled={!form.formState.isValid}>
-                    Update Competitor
+                    Add Competitor
                   </Button>
                 </DialogFooter>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {competitors.length === 0 ? (
+        <div className='text-center py-12 border rounded-lg'>
+          <h3 className='text-lg font-medium mb-2'>No competitors yet</h3>
+          <p className='text-muted-foreground mb-4'>Add your first competitor to start tracking and analyzing them.</p>
+          <Button onClick={() => setIsCreateOpen(true)} disabled={hasReachedLimit}>
+            <Plus className='h-4 w-4 mr-2' />
+            Add Your First Competitor
+          </Button>
+        </div>
+      ) : (
+        <DataTable
+          columns={competitorColumns({
+            onEdit: (competitor) => handleEdit(competitor),
+            onDelete: (id) => handleDelete(id),
+            onView: (id) => handleLoadAnalysis(id),
+          })}
+          data={competitors}
+        />
+      )}
+
+      <Dialog
+        open={isViewSummariesOpen}
+        onOpenChange={(open) => {
+          setIsViewSummariesOpen(open);
+          if (!open) {
+            setViewingId(null);
+            setCurrentAnalysisIndex(0);
+          }
+        }}
+      >
+        <DialogContent ref={scrollRef} className='lg:max-w-1/2 max-h-[85vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>Competitor Analyses</DialogTitle>
+            <DialogDescription>
+              {getAnalysis && getAnalysis.length > 0
+                ? `Viewing analysis ${currentAnalysisIndex + 1} of ${getAnalysis.length}`
+                : 'No analyses available'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {getAnalysis === undefined ? (
+            <div className='flex-1 flex items-center justify-center py-12'>
+              <Skeleton className='h-64 w-full' />
+            </div>
+          ) : getAnalysis.length === 0 ? (
+            <div className='flex-1 flex flex-col items-center justify-center py-12 text-center'>
+              <p className='text-muted-foreground mb-2'>No analyses yet for this competitor.</p>
+              <p className='text-sm text-muted-foreground'>Analyses are generated automatically based on the scan frequency.</p>
+            </div>
+          ) : (
+            <>
+              <p className='text-sm text-muted-foreground'>
+                Generated on{' '}
+                {new Date(getAnalysis[currentAnalysisIndex]?._creationTime).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+              <div className='flex-1 overflow-y-auto min-h-0'>
+                <ScrapeLogViewer summarizedMarkdown={getAnalysis[currentAnalysisIndex]?.analysis} structuredInsights={null} />
+              </div>
+
+              {getAnalysis.length > 1 && (
+                <div className='flex items-center justify-between pt-4 border-t'>
+                  <Button variant='outline' size='sm' onClick={() => handleNavigateAnalysis(-1)} disabled={currentAnalysisIndex === 0}>
+                    <ChevronLeft className='h-4 w-4 mr-1' />
+                    Previous
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => handleNavigateAnalysis(1)}
+                    disabled={currentAnalysisIndex === getAnalysis.length - 1}
+                  >
+                    Next
+                    <ChevronRight className='h-4 w-4 ml-1' />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Competitor</DialogTitle>
+            <DialogDescription>Update this competitors details.</DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleUpdate)} className='space-y-4'>
+              <FormField
+                control={form.control}
+                name='name'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder='e.g., Acme Corp' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='frequency'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Scan Frequency</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select frequency' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value='w'>Weekly</SelectItem>
+                        <SelectItem value='m'>Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type='button' variant='outline' onClick={handleCloseEdit}>
+                  Cancel
+                </Button>
+                <Button type='submit' disabled={!form.formState.isValid}>
+                  Update Competitor
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

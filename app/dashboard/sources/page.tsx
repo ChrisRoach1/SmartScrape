@@ -201,7 +201,7 @@ export default function SourcesPage() {
   }
 
   return (
-    <div className='container mx-auto'>
+    <div className='container mx-auto animate-fade-up'>
       <div className='flex mb-6 flex-row-reverse'>
         <Dialog
           open={isCreateOpen}
@@ -312,13 +312,13 @@ export default function SourcesPage() {
         </div>
       ) : (
         <DataTable
-        columns={sourceColumns({
-          onStartAnalysis: (urls) => handleStartAnalysis(urls),
-          onEdit: (source) => handleEdit(source),
-          onDelete: (id) => handleDelete(id),
-        })}
-        data={sources}
-      />
+          columns={sourceColumns({
+            onStartAnalysis: (urls) => handleStartAnalysis(urls),
+            onEdit: (source) => handleEdit(source),
+            onDelete: (id) => handleDelete(id),
+          })}
+          data={sources}
+        />
       )}
 
       {/* Edit Dialog */}

@@ -13,9 +13,6 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 
-
-
-
 export default function SettingsPage() {
   const settings = useQuery(api.userSettings.get);
   const upsertSettings = useMutation(api.userSettings.upsert);
@@ -28,15 +25,14 @@ export default function SettingsPage() {
   const form = useForm<z.infer<typeof settingsFormSchema>>({
     resolver: zodResolver(settingsFormSchema),
     defaultValues: {
-      systemPrompt: "",
+      systemPrompt: '',
     },
   });
 
-    
-  useEffect(() =>{
-    form.setValue("systemPrompt", settings?.systemPrompt ?? "")
-  }, [settings,form])
-  
+  useEffect(() => {
+    form.setValue('systemPrompt', settings?.systemPrompt ?? '');
+  }, [settings, form]);
+
   if (settings === undefined) {
     return (
       <div className='min-h-[80vh] flex items-center justify-center'>
@@ -69,14 +65,12 @@ export default function SettingsPage() {
   const hasChanges = settings?.systemPrompt !== (settings?.systemPrompt ?? '');
 
   return (
-    <div className='min-h-[80vh] flex items-center justify-center py-12'>
+    <div className='min-h-[80vh] flex items-center justify-center py-12 animate-fade-up'>
       <div className='w-full max-w-2xl px-6'>
         {/* Header */}
         <div className='mb-10'>
           <div className='flex items-center gap-3 mb-3'>
-            <h1 className='font-display text-3xl font-semibold tracking-tight'>
-              Your Mission
-            </h1>
+            <h1 className='font-display text-3xl font-semibold tracking-tight'>Your Mission</h1>
           </div>
           <p className='text-muted-foreground text-lg leading-relaxed max-w-xl'>
             Define the purpose that guides every analysis. This context shapes how AI interprets and prioritizes information for you.
@@ -86,7 +80,6 @@ export default function SettingsPage() {
         {/* Mission Card */}
         <div>
           <div className='relative group'>
-
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSave)}>
                 <div className='space-y-4'>
@@ -96,33 +89,33 @@ export default function SettingsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <Textarea placeholder='We are a B2B SaaS company helping small businesses streamline their operations. Our focus is on identifying market trends, 
-                          competitor movements, and emerging technologies in the SMB space...' 
-                          className='w-full px-6 py-5 bg-transparent text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none text-[15px] leading-relaxed'
-                          rows={10}
-                          {...field}                    
+                          <Textarea
+                            placeholder='We are a B2B SaaS company helping small businesses streamline their operations. Our focus is on identifying market trends, 
+                          competitor movements, and emerging technologies in the SMB space...'
+                            className='w-full px-6 py-5 bg-transparent text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none text-[15px] leading-relaxed'
+                            rows={10}
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                <DialogFooter>
-                <Button
-                  size='lg'
-                  className='min-w-[120px] transition-all duration-200'
-                >
-                  {isSaving ? (
-                    <span className='flex items-center gap-2'>
-                      <span className='w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin' />
-                      Saving
-                    </span>
-                  ) : 'Save Mission'}
-                </Button>
-                </DialogFooter>
-              </div>
+                  <DialogFooter>
+                    <Button size='lg' className='min-w-[120px] transition-all duration-200'>
+                      {isSaving ? (
+                        <span className='flex items-center gap-2'>
+                          <span className='w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin' />
+                          Saving
+                        </span>
+                      ) : (
+                        'Save Mission'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
               </form>
-            </Form>   
+            </Form>
           </div>
         </div>
       </div>

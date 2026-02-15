@@ -26,7 +26,7 @@ export const createLogRecord = mutation({
     });
 
     if (!args.isPro) {
-      await ctx.runMutation(internal.usage.incrementSummaryCount, {userId: userID});
+      await ctx.runMutation(internal.usage.incrementSummaryCount, { userId: userID });
     }
 
     ctx.scheduler.runAfter(0, api.firecrawlActions.startScrape, {
@@ -134,36 +134,10 @@ export const getAllLogs = query({
   },
 });
 
-const statusValidator = v.union(v.literal('processing'), v.literal('completed'), v.literal('failed'));
-const sentimentValidator = v.union(v.literal('positive'), v.literal('negative'), v.literal('neutral'), v.literal('mixed'));
-
 export const searchLogs = query({
   args: {
     searchTerm: v.optional(v.string()),
-    status: v.optional(statusValidator),
-    sentiment: v.optional(sentimentValidator),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id('scrapeLog'),
-      _creationTime: v.number(),
-      title: v.optional(v.string()),
-      userId: v.string(),
-      urls: v.array(v.string()),
-      modelToRun: v.optional(v.string()),
-      status: statusValidator,
-      summarizedMarkdown: v.optional(v.string()),
-      structuredInsights: v.optional(
-        v.object({
-          keyFindings: v.array(v.string()),
-          companiesMentioned: v.array(v.string()),
-          actionItems: v.array(v.string()),
-          sentiment: sentimentValidator,
-          topicsIdentified: v.array(v.string()),
-        }),
-      ),
-    }),
-  ),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (identity === null) {
@@ -186,14 +160,6 @@ export const searchLogs = query({
         .withIndex('by_userId', (q) => q.eq('userId', userId))
         .order('desc')
         .collect();
-    }
-
-    // Apply additional filters
-    if (args.status) {
-      results = results.filter((r) => r.status === args.status);
-    }
-    if (args.sentiment) {
-      results = results.filter((r) => r.structuredInsights?.sentiment === args.sentiment);
     }
 
     // Sort by creation time descending (search results may not be ordered)

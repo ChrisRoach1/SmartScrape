@@ -61,4 +61,23 @@ export default defineSchema({
     code: v.string(),
     description: v.string(),
   }),
+
+  sources: defineTable({
+    userId: v.string(),
+    isFile: v.boolean(),
+    fileName: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    storageId: v.optional(v.string()),
+    nonFileContent: v.optional(v.string()),
+    nonFileContentTitle: v.optional(v.string()),
+  })
+    .index('by_userId', ['userId'])
+    .searchIndex('search_content', {
+      searchField: 'nonFileContent',
+      filterFields: ['userId'],
+    })
+    .searchIndex('search_fileNames', {
+      searchField: 'fileName',
+      filterFields: ['userId'],
+    }),
 });

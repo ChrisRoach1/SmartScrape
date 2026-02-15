@@ -5,104 +5,35 @@ import { Doc } from '@/convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { DataTable } from './data-table';
 import { createColumns } from './columns';
 import { ScrapeLogDialog } from '@/components/scrape-log-dialog';
-import { useState, useCallback } from 'react';
-import { LogFilters, StatusFilter, SentimentFilter } from '@/components/log-filters';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { debounce } from '@tanstack/pacer';
 
 export default function DashboardPage() {
   const [selectedLog, setSelectedLog] = useState<Doc<'scrapeLog'> | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // Filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>('all');
 
-  // Build query args
-  const queryArgs = {
-    searchTerm: searchTerm || undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    sentiment: sentimentFilter !== 'all' ? sentimentFilter : undefined,
-  };
-
-  const logs = useQuery(api.scrapeLog.searchLogs, queryArgs);
+  const logs = useQuery(api.scrapeLog.searchLogs, { searchTerm: searchTerm });
 
   const handleViewLog = (scrapeLog: Doc<'scrapeLog'>) => {
     setSelectedLog(scrapeLog);
     setIsDialogOpen(true);
   };
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value);
-  }, []);
-
-  const handleStatusChange = useCallback((value: StatusFilter) => {
-    setStatusFilter(value);
-  }, []);
-
-  const handleSentimentChange = useCallback((value: SentimentFilter) => {
-    setSentimentFilter(value);
-  }, []);
+  const debouncedSearch = debounce((searchTerm: string) => setSearchTerm(searchTerm), {
+    wait: 500,
+  });
 
   const columns = createColumns(handleViewLog);
 
-  if (logs === undefined) {
-    return (
-      <div className='container mx-auto'>
-        <div className='flex flex-row-reverse'>
-          <Skeleton className='h-10 w-[140px]' />
-        </div>
-        <div className='container mx-auto py-6'>
-          <div className='mb-6'>
-            <Skeleton className='h-10 w-full max-w-sm' />
-          </div>
-          <div className='border rounded-lg'>
-            <table className='w-full'>
-              <thead>
-                <tr className='border-b'>
-                  <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Title</th>
-                  <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Created At</th>
-                  <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Status</th>
-                  <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Sentiment</th>
-                  <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'></th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <tr key={i} className='border-b'>
-                    <td className='p-4'>
-                      <Skeleton className='h-4 w-[150px]' />
-                    </td>
-                    <td className='p-4'>
-                      <Skeleton className='h-4 w-[180px]' />
-                    </td>
-                    <td className='p-4'>
-                      <Skeleton className='h-6 w-[100px] rounded-full' />
-                    </td>
-                    <td className='p-4'>
-                      <Skeleton className='h-6 w-[90px] rounded-full' />
-                    </td>
-                    <td className='p-4'>
-                      <Skeleton className='h-8 w-8 rounded-md' />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'all' || sentimentFilter !== 'all';
-
   return (
-    <div className='container mx-auto'>
+    <div className='container mx-auto animate-fade-up'>
       <div className='flex flex-row-reverse'>
         <Link href='/dashboard/summarize'>
           <Button>
@@ -112,28 +43,51 @@ export default function DashboardPage() {
         </Link>
       </div>
       <div className='container mx-auto py-6'>
-        <LogFilters
-          onSearchChange={handleSearchChange}
-          onStatusChange={handleStatusChange}
-          onSentimentChange={handleSentimentChange}
-          searchValue={searchTerm}
-          statusValue={statusFilter}
-          sentimentValue={sentimentFilter}
-        />
+        <div className='flex flex-col gap-4 mb-6 sm:flex-row sm:items-center'>
+          <div className='relative flex-1 max-w-sm'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+            <Input placeholder='Search summaries...' onChange={(e) => debouncedSearch(e.target.value)} className='pl-9' />
+          </div>
+        </div>
 
-        {logs.length === 0 && hasActiveFilters ? (
-          <div className='border rounded-lg p-8 text-center'>
-            <p className='text-muted-foreground'>No results match your filters.</p>
-            <Button
-              variant='link'
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setSentimentFilter('all');
-              }}
-            >
-              Clear filters
-            </Button>
+        {logs === undefined ? (
+          <div className='container mx-auto'>
+            <div className='container mx-auto py-6'>
+              <div className='border rounded-lg'>
+                <table className='w-full'>
+                  <thead>
+                    <tr className='border-b'>
+                      <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Title</th>
+                      <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Created At</th>
+                      <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Status</th>
+                      <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Sentiment</th>
+                      <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <tr key={i} className='border-b'>
+                        <td className='p-4'>
+                          <Skeleton className='h-4 w-[150px]' />
+                        </td>
+                        <td className='p-4'>
+                          <Skeleton className='h-4 w-[180px]' />
+                        </td>
+                        <td className='p-4'>
+                          <Skeleton className='h-6 w-[100px] rounded-full' />
+                        </td>
+                        <td className='p-4'>
+                          <Skeleton className='h-6 w-[90px] rounded-full' />
+                        </td>
+                        <td className='p-4'>
+                          <Skeleton className='h-8 w-8 rounded-md' />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         ) : (
           <DataTable columns={columns} data={logs} />
