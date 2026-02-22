@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Doc, Id } from '@/convex/_generated/dataModel';
@@ -21,6 +21,9 @@ import { competitorColumns } from './columns';
 import { useAuth } from '@clerk/clerk-react';
 import { ProUpgradeFallback } from '@/components/pro-upgrade-fallback';
 
+type AddEditState = { mode: 'closed' } | { mode: 'add' } | { mode: 'edit'; editId: Id<'competitors'> };
+type AddEditAction = { type: 'add' } | { type: 'reset' } | { type: 'edit'; editId: Id<'competitors'> };
+
 const competitorFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   frequency: z.union([z.literal('w'), z.literal('m')]),
@@ -29,14 +32,24 @@ const competitorFormSchema = z.object({
 const COMPETITOR_LIMIT = 5;
 
 export default function CompetitorsPage() {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingId, setEditingId] = useState<Id<'competitors'> | null>(null);
   const [viewingId, setViewingId] = useState<Id<'competitors'> | null>(null);
   const [isViewSummariesOpen, setIsViewSummariesOpen] = useState(false);
   const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState(0);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  function addEditStateReducer(_state: AddEditState, action: AddEditAction): AddEditState {
+    switch (action.type) {
+      case 'add':
+        return { mode: 'add' };
+      case 'edit':
+        return { mode: 'edit', editId: action.editId };
+      case 'reset':
+        return { mode: 'closed' };
+    }
+  }
+
+  const [addEditState, dispatch] = useReducer(addEditStateReducer, { mode: 'closed' });
 
   const { has } = useAuth();
   const hasPremiumAccess = has?.({ plan: 'pro' }) ?? false;
@@ -116,7 +129,7 @@ export default function CompetitorsPage() {
 
   function resetForm() {
     form.reset({ name: '', frequency: 'm' });
-    setEditingId(null);
+    dispatch({ type: 'reset' });
   }
 
   async function handleCreate(values: z.infer<typeof competitorFormSchema>) {
@@ -127,7 +140,7 @@ export default function CompetitorsPage() {
       });
 
       toast.success('Competitor created successfully');
-      setIsCreateOpen(false);
+      dispatch({ type: 'reset' });
       resetForm();
     } catch {
       toast.error('Failed to create competitor');
@@ -135,17 +148,17 @@ export default function CompetitorsPage() {
   }
 
   async function handleUpdate(values: z.infer<typeof competitorFormSchema>) {
-    if (!editingId) return;
-
     try {
-      await updateCompetitor({
-        id: editingId,
-        name: values.name,
-        scanFrequency: values.frequency,
-      });
+      if (addEditState.mode === 'edit') {
+        await updateCompetitor({
+          id: addEditState.editId,
+          name: values.name,
+          scanFrequency: values.frequency,
+        });
+      }
 
       toast.success('Competitor updated successfully');
-      setIsEditOpen(false);
+      dispatch({ type: 'reset' });
       resetForm();
     } catch {
       toast.error('Failed to update competitor');
@@ -168,25 +181,21 @@ export default function CompetitorsPage() {
   }
 
   function handleEdit(competitor: Doc<'competitors'>) {
-    setEditingId(competitor._id);
-
     form.reset({
       name: competitor.name,
       frequency: competitor.scanFrequency,
     });
 
-    setIsEditOpen(true);
+    dispatch({ type: 'edit', editId: competitor._id });
   }
 
-  function handleCloseCreate() {
-    setIsCreateOpen(false);
+  function handleClose() {
+    dispatch({ type: 'reset' });
     resetForm();
   }
 
-  function handleCloseEdit() {
-    setIsEditOpen(false);
-    resetForm();
-  }
+  const isAddEditOpen = addEditState.mode !== 'closed';
+  const isEditMode = addEditState.mode === 'edit';
 
   return (
     <div className='container mx-auto animate-fade-up'>
@@ -215,79 +224,80 @@ export default function CompetitorsPage() {
         </div>
       )}
       <div className='flex mb-6 flex-row-reverse'>
-        <Dialog
-          open={isCreateOpen}
-          onOpenChange={(open) => {
-            setIsCreateOpen(open);
-            if (!open) resetForm();
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button disabled={hasReachedLimit}>
-              <Plus className='h-4 w-4 mr-2' />
-              New Competitor
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Competitor</DialogTitle>
-              <DialogDescription>Add a new competitor to track and analyze.</DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleCreate)} className='space-y-4'>
-                <FormField
-                  control={form.control}
-                  name='name'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder='e.g., Acme Corp' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name='frequency'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Scan Frequency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder='Select frequency' />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='w'>Weekly</SelectItem>
-                          <SelectItem value='m'>Monthly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type='button' variant='outline' onClick={handleCloseCreate}>
-                    Cancel
-                  </Button>
-                  <Button type='submit' disabled={!form.formState.isValid}>
-                    Add Competitor
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button disabled={hasReachedLimit} onClick={() => dispatch({ type: 'add' })}>
+          <Plus className='h-4 w-4 mr-2' />
+          New Competitor
+        </Button>
       </div>
+
+      {/* Add / Edit Dialog */}
+      <Dialog
+        open={isAddEditOpen}
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? 'Edit Competitor' : 'Add Competitor'}</DialogTitle>
+            <DialogDescription>
+              {isEditMode ? "Update this competitor's details." : 'Add a new competitor to track and analyze.'}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(isEditMode ? handleUpdate : handleCreate)} className='space-y-4'>
+              <FormField
+                control={form.control}
+                name='name'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder='e.g., Acme Corp' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='frequency'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Scan Frequency</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select frequency' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value='w'>Weekly</SelectItem>
+                        <SelectItem value='m'>Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type='button' variant='outline' onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button type='submit' disabled={!form.formState.isValid}>
+                  {isEditMode ? 'Update Competitor' : 'Add Competitor'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {competitors.length === 0 ? (
         <div className='text-center py-12 border rounded-lg'>
           <h3 className='text-lg font-medium mb-2'>No competitors yet</h3>
           <p className='text-muted-foreground mb-4'>Add your first competitor to start tracking and analyzing them.</p>
-          <Button onClick={() => setIsCreateOpen(true)} disabled={hasReachedLimit}>
+          <Button onClick={() => dispatch({ type: 'add' })} disabled={hasReachedLimit}>
             <Plus className='h-4 w-4 mr-2' />
             Add Your First Competitor
           </Button>
@@ -367,68 +377,6 @@ export default function CompetitorsPage() {
               )}
             </>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog
-        open={isEditOpen}
-        onOpenChange={(open) => {
-          setIsEditOpen(open);
-          if (!open) resetForm();
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Competitor</DialogTitle>
-            <DialogDescription>Update this competitors details.</DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleUpdate)} className='space-y-4'>
-              <FormField
-                control={form.control}
-                name='name'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder='e.g., Acme Corp' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='frequency'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Scan Frequency</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder='Select frequency' />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value='w'>Weekly</SelectItem>
-                        <SelectItem value='m'>Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type='button' variant='outline' onClick={handleCloseEdit}>
-                  Cancel
-                </Button>
-                <Button type='submit' disabled={!form.formState.isValid}>
-                  Update Competitor
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
         </DialogContent>
       </Dialog>
     </div>

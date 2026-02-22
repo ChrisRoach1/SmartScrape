@@ -118,3 +118,5 @@ export function createColumns(onViewLog?: (id: Doc<'scrapeLog'>) => void): Colum
     },
   ];
 }
+
+

@@ -12,7 +12,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { usePathname } from 'next/navigation';
-import Head from 'next/head';
 
 export default function RootLayout({
   children,
@@ -45,9 +44,6 @@ export default function RootLayout({
 
   return (
     <>
-      <Head>
-        <meta name='robots' content='noindex, nofollow' />
-      </Head>
       <SidebarProvider
         style={
           {
