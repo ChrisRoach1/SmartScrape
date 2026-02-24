@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useReducer } from 'react';
 import { ArrowRight, Loader2, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
@@ -31,6 +31,13 @@ type DemoViewState =
   | { status: 'error'; errorMsg: string }
   | { status: 'done'; summary: string; scrapedUrl: string; insight: DemoInsights | null };
 
+type DemoViewAction =
+  | { type: 'start' }
+  | { type: 'markUsed' }
+  | { type: 'markError'; errorMsg: string }
+  | { type: 'markDone'; summary: string; scrapedUrl: string; insight: DemoInsights | null }
+  | { type: 'reset' };
+
 const DEMO_RANDOM_ID_STORAGE_KEY = 'smartscrape-demo-random-id';
 
 const demoFormSchema = z.object({
@@ -43,9 +50,31 @@ const EXAMPLE_URLS = [
   { label: 'GitHub Blog', url: 'https://github.blog' },
 ];
 
+function demoViewReducer(_state: DemoViewState, action: DemoViewAction): DemoViewState {
+  switch (action.type) {
+    case 'start':
+      return { status: 'loading' };
+    case 'markUsed':
+      return { status: 'used' };
+    case 'markError':
+      return { status: 'error', errorMsg: action.errorMsg };
+    case 'markDone':
+      return {
+        status: 'done',
+        summary: action.summary,
+        scrapedUrl: action.scrapedUrl,
+        insight: action.insight,
+      };
+    case 'reset':
+      return { status: 'idle' };
+    default:
+      return _state;
+  }
+}
+
 export function InteractiveDemo() {
-  const [viewState, setViewState] = useState<DemoViewState>({ status: 'idle' });
-  const [randomId] = useState(() => {
+  const [viewState, dispatch] = useReducer(demoViewReducer, { status: 'idle' });
+  const randomId = useMemo(() => {
     if (typeof window === 'undefined') {
       return '';
     }
@@ -58,7 +87,7 @@ export function InteractiveDemo() {
     const newRandomId = crypto.randomUUID();
     localStorage.setItem(DEMO_RANDOM_ID_STORAGE_KEY, newRandomId);
     return newRandomId;
-  });
+  }, []);
 
   const runDemo = useAction(api.demo.runDemo);
   const demoForm = useForm<z.infer<typeof demoFormSchema>>({
@@ -89,7 +118,7 @@ export function InteractiveDemo() {
   async function onSubmit(values: z.infer<typeof demoFormSchema>) {
     if (status === 'loading') return;
     const normalizedUrl = values.url.trim();
-    setViewState({ status: 'loading' });
+    dispatch({ type: 'start' });
 
     try {
       const randomId = getOrCreateRandomId();
@@ -97,27 +126,27 @@ export function InteractiveDemo() {
 
       if (!result.success) {
         if (result.alreadyUsed) {
-          setViewState({ status: 'used' });
+          dispatch({ type: 'markUsed' });
         } else {
-          setViewState({ status: 'error', errorMsg: 'Unable to run demo right now. Please try again.' });
+          dispatch({ type: 'markError', errorMsg: 'Unable to run demo right now. Please try again.' });
         }
         return;
       }
 
-      setViewState({
-        status: 'done',
+      dispatch({
+        type: 'markDone',
         summary: result.summary,
         scrapedUrl: normalizedUrl,
         insight: result.insight ?? null,
       });
     } catch {
-      setViewState({ status: 'error', errorMsg: 'Something went wrong. Please try again.' });
+      dispatch({ type: 'markError', errorMsg: 'Something went wrong. Please try again.' });
     }
   }
 
   function handleReset() {
     demoForm.reset({ url: '' });
-    setViewState({ status: 'idle' });
+    dispatch({ type: 'reset' });
   }
 
   return (
