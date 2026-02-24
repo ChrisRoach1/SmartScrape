@@ -62,6 +62,11 @@ export default defineSchema({
     description: v.string(),
   }),
 
+  demoUsage: defineTable({
+    randomId: v.string(),
+    usedAt: v.number(),
+  }).index('by_randomId', ['randomId']),
+
   sources: defineTable({
     userId: v.string(),
     isFile: v.boolean(),

@@ -5,8 +5,12 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@clerk/clerk-react';
 
 export function SiteHeader() {
+
+  const {isSignedIn} = useAuth();
+
   return (
     <header className='sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border/50'>
       <div className='container mx-auto flex h-20 items-center justify-between px-6 lg:px-12'>
@@ -21,6 +25,7 @@ export function SiteHeader() {
         <nav className='hidden md:flex items-center gap-8'>
           <NavLink href='#features'>Features</NavLink>
           <NavLink href='#how-it-works'>How It Works</NavLink>
+          {!isSignedIn ? (<NavLink href='#demo'>Demo</NavLink>) : (<></>)}
           <NavLink href='#pricing'>Pricing</NavLink>
         </nav>
 

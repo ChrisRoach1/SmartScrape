@@ -11,6 +11,8 @@
 import type * as agent from "../agent.js";
 import type * as competitor from "../competitor.js";
 import type * as crons from "../crons.js";
+import type * as demo from "../demo.js";
+import type * as demoDb from "../demoDb.js";
 import type * as firecrawlActions from "../firecrawlActions.js";
 import type * as models from "../models.js";
 import type * as scrapeLog from "../scrapeLog.js";
@@ -29,6 +31,8 @@ declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   competitor: typeof competitor;
   crons: typeof crons;
+  demo: typeof demo;
+  demoDb: typeof demoDb;
   firecrawlActions: typeof firecrawlActions;
   models: typeof models;
   scrapeLog: typeof scrapeLog;

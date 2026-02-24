@@ -9,7 +9,7 @@ import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { createClerkClient } from '@clerk/nextjs/server';
 
-const structuredInsightsSchema = z.object({
+export const structuredInsightsSchema = z.object({
   keyFindings: z.array(z.string()).describe('3-5 key takeaways or findings from the analyzed content'),
   companiesMentioned: z.array(z.string()).describe('Names of companies, competitors, or partners mentioned in the content'),
   actionItems: z.array(z.string()).describe('3-5 specific, actionable recommendations based on the analysis'),
@@ -198,6 +198,6 @@ export const startScrape = action({
         topicsIdentified: structuredInsights.topicsIdentified,
       },
     });
-    console.log('scrapeResult:', scrapedResults);
+
   },
 });
