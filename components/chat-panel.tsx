@@ -10,7 +10,7 @@ import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Doc } from '@/convex/_generated/dataModel';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import { optimisticallySendMessage, UIMessage, useUIMessages } from '@convex-dev/agent/react';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -25,7 +25,7 @@ const chatFormSchema = z.object({
 type ChatFormValues = z.infer<typeof chatFormSchema>;
 
 type props = {
-  selectedSources: Doc<'sources'>[] | null;
+  selectedSources: Id<'sources'>[] | null;
   selectedThread?: Thread | null;
 };
 
@@ -34,6 +34,8 @@ export function ChatPanel(props: props) {
     resolver: zodResolver(chatFormSchema),
     defaultValues: { message: '' },
   });
+
+  const [isExistingThread, setIsExistingThread] = useState<boolean>(props.selectedThread?._id ? true : false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(props.selectedThread?._id ?? null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,7 @@ export function ChatPanel(props: props) {
       prompt: args.prompt,
     });
   });
+
   const { results, status, loadMore } = useUIMessages(
     api.agent.listThreadMessages,
     currentThreadId ? { threadId: currentThreadId } : 'skip',
@@ -87,11 +90,11 @@ export function ChatPanel(props: props) {
 
   const handleSendMessage = async (values: ChatFormValues) => {
     if (currentThreadId) {
-      await sendMessage({ prompt: values.message, threadId: currentThreadId });
+      await sendMessage({ prompt: values.message, threadId: currentThreadId, sourceIds: props.selectedSources ?? [] });
     } else {
       const threadId = await createThread({ prompt: values.message, sourceIds: [] });
       setCurrentThreadId(threadId);
-      await sendMessage({ prompt: values.message, threadId });
+      await sendMessage({ prompt: values.message, threadId, sourceIds: props.selectedSources ?? [] });
     }
     form.reset();
   };
@@ -153,16 +156,21 @@ export function ChatPanel(props: props) {
                           form.handleSubmit(handleSendMessage)();
                         }
                       }}
-                      placeholder='Add a source to start chatting...'
+                      placeholder={props.selectedThread ? 'Continue the conversation...' : 'Add a source to start chatting...'}
                       className='h-10 pr-24 text-sm'
-                      disabled={!props.selectedSources?.length}
+                      disabled={!props.selectedThread && !props.selectedSources?.length}
                     />
                   </FormControl>
-                  <div className='absolute right-3 top-1/2 -translate-y-1/2'>
-                    <Badge variant='secondary' className='text-[10px] font-normal text-muted-foreground'>
-                      {props.selectedSources?.length ?? 0} sources
-                    </Badge>
-                  </div>
+
+                  {!props.selectedThread?._id ? (
+                    <div className='absolute right-3 top-1/2 -translate-y-1/2'>
+                      <Badge variant='secondary' className='text-[10px] font-normal text-muted-foreground'>
+                        {props.selectedSources?.length ?? 0} sources
+                      </Badge>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
                 </FormItem>
               )}
             />
@@ -172,7 +180,7 @@ export function ChatPanel(props: props) {
                   type='submit'
                   size='icon'
                   className='shrink-0 transition-all'
-                  disabled={!form.formState.isValid || !props.selectedSources?.length}
+                  disabled={!form.formState.isValid || (!props.selectedThread && !props.selectedSources?.length)}
                 >
                   <ArrowRight className='size-4' />
                 </Button>

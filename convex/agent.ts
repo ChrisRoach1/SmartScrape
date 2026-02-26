@@ -1,10 +1,11 @@
 import { components, internal } from './_generated/api';
 import { Agent, listUIMessages, saveMessage, syncStreams, vStreamArgs } from '@convex-dev/agent';
 import { openai } from '@ai-sdk/openai';
-import { action, internalAction, mutation, query } from './_generated/server';
+import { internalAction, mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { createThread } from '@convex-dev/agent';
 import { paginationOptsValidator } from 'convex/server';
+import { Id } from './_generated/dataModel';
 
 const agent = new Agent(components.agent, {
   name: 'Source Review Agent',
@@ -32,13 +33,58 @@ export const startThread = mutation({
   },
 });
 
+export const deleteThread = mutation({
+  args: {
+    threadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error('Not authenticated');
+    }
+
+    const userId = identity.tokenIdentifier.split('|')[1];
+
+    await agent.deleteThreadAsync(ctx, { threadId: args.threadId });
+  },
+});
+
 export const sendMessage = mutation({
-  args: { threadId: v.string(), prompt: v.string() },
-  handler: async (ctx, { threadId, prompt }) => {
+  args: {
+    threadId: v.string(),
+    prompt: v.string(),
+    sourceIds: v.array(v.id('sources')),
+  },
+  handler: async (ctx, { threadId, prompt, sourceIds }) => {
+    const files: { type: 'file'; data: string; mimeType: string }[] = [];
+
+    for (const id of sourceIds) {
+      const source = await ctx.db.get(id);
+
+      if (source?.storageId) {
+        const fileUrl = await ctx.storage.getUrl(source?.storageId as Id<'_storage'>);
+        const file = await ctx.db.system
+          .query('_storage')
+          .withIndex('by_id', (e) => e.eq('_id', source?.storageId as Id<'_storage'>))
+          .first();
+        if (fileUrl) {
+          files.push({
+            type: 'file' as const,
+            data: fileUrl,
+            mimeType: file?.contentType ?? '',
+          });
+        }
+      }
+    }
+
     const { messageId } = await saveMessage(ctx, components.agent, {
       threadId,
-      prompt,
+      message: {
+        role: 'user',
+        content: [...files, { type: 'text', text: prompt }],
+      },
     });
+
     await ctx.scheduler.runAfter(0, internal.agent.generateResponseAsync, {
       threadId,
       promptMessageId: messageId,

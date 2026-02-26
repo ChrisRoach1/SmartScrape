@@ -2,9 +2,11 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { Button } from './ui/button';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 export type Thread = {
   _id: string;
@@ -21,7 +23,8 @@ type Props = {
 };
 
 export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props) {
-  const threads = useQuery(api.agent.listThreads, {});
+  const threads = useQuery(api.agent.listThreads);
+  const deleteThread = useMutation(api.agent.deleteThread);
 
   const toggleSelectedThread = (thread: Thread) => {
     if (selectedThread?._id === thread._id) {
@@ -29,6 +32,10 @@ export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props)
     } else {
       handleSetSelectedThread(thread);
     }
+  };
+
+  const handleDeleteThread = (thread: Thread) => {
+    deleteThread({ threadId: thread._id });
   };
 
   return (
@@ -43,6 +50,15 @@ export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props)
 
       {/* Content */}
       <div className='flex flex-1 flex-col gap-3 p-4'>
+        <Button
+          variant='outline'
+          className='w-full justify-center gap-2 transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary'
+          size='sm'
+          onClick={() => handleSetSelectedThread(null)}
+        >
+          <Plus className='size-4' />
+          New Thread
+        </Button>
         {/* Threads List / Loading / Empty State */}
         {threads === undefined ? (
           <div className='flex flex-1 flex-col gap-0.5 overflow-y-auto'>
@@ -60,16 +76,26 @@ export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props)
               const displayTitle = thread.title ?? 'Untitled';
 
               return (
-                <button
+                <div
                   key={thread._id}
-                  onClick={() => toggleSelectedThread(thread)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-muted/50 ${
+                  className={`group flex w-full items-center rounded-lg text-left text-xs text-foreground transition-colors hover:bg-muted/50 ${
                     isSelected ? 'bg-muted/60 font-medium' : ''
                   }`}
                 >
-                  <MessageSquare className={`size-3.5 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <span className='truncate'>{displayTitle}</span>
-                </button>
+                  <button onClick={() => toggleSelectedThread(thread)} className='flex min-w-0 flex-1 items-center gap-2 px-3 py-2'>
+                    <MessageSquare className={`size-3.5 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className='truncate'>{displayTitle}</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteThread(thread);
+                    }}
+                    className='mr-1.5 rounded-md p-1 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100'
+                  >
+                    <Trash2 className='size-3' />
+                  </button>
+                </div>
               );
             })}
           </div>

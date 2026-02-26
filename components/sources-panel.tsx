@@ -10,19 +10,20 @@ import { Dispatch, SetStateAction, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { debounce } from '@tanstack/pacer';
-import { Doc } from '@/convex/_generated/dataModel';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 type props = {
-  selectedSources: Doc<"sources">[] | null;
-  handleSetSelectedSources: Dispatch<SetStateAction<Doc<"sources">[] | null>>;
-}
+  selectedSources: Id<'sources'>[] | null;
+  handleSetSelectedSources: Dispatch<SetStateAction<Id<'sources'>[] | null>>;
+  disabled?: boolean;
+};
 
 export function SourcesPanel(props: props) {
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const sources = useQuery(api.source.getSources, { searchTerm: searchTerm });
-  const selectedSourceIds = new Set((props.selectedSources ?? []).map((source) => source._id));
+  const selectedSourceIds = new Set((props.selectedSources ?? []).map((source) => source));
 
   const debouncedSearch = debounce((searchTerm: string) => setSearchTerm(searchTerm), {
     wait: 500,
@@ -31,14 +32,14 @@ export function SourcesPanel(props: props) {
   const toggleSelectedSource = (source: Doc<'sources'>) => {
     props.handleSetSelectedSources((prevSelectedSources) => {
       const currentSelection = prevSelectedSources ?? [];
-      const isAlreadySelected = currentSelection.some((selectedSource) => selectedSource._id === source._id);
+      const isAlreadySelected = currentSelection.some((selectedSource) => selectedSource === source._id);
 
       if (isAlreadySelected) {
-        const nextSelection = currentSelection.filter((selectedSource) => selectedSource._id !== source._id);
+        const nextSelection = currentSelection.filter((selectedSource) => selectedSource !== source._id);
         return nextSelection.length > 0 ? nextSelection : null;
       }
 
-      return [...currentSelection, source];
+      return [...currentSelection, source._id];
     });
   };
 
@@ -53,7 +54,7 @@ export function SourcesPanel(props: props) {
       </div>
 
       {/* Content */}
-      <div className='flex flex-1 flex-col gap-3 p-4'>
+      <div className={`flex flex-1 flex-col gap-3 p-4 transition-opacity ${props.disabled ? 'pointer-events-none opacity-50' : ''}`}>
         {/* Add Sources Button */}
         <Button
           variant='outline'
