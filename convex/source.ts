@@ -1,5 +1,6 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
+import { Id } from './_generated/dataModel';
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -85,5 +86,28 @@ export const getSources = query({
     }
 
     return results;
+  },
+});
+
+export const deleteSource = mutation({
+  args: {
+    sourceId: v.id('sources'),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error('Not authenticated');
+    }
+
+    const source = await ctx.db
+      .query('sources')
+      .withIndex('by_id', (e) => e.eq('_id', args.sourceId))
+      .first();
+
+    ctx.db.delete('sources', args.sourceId);
+
+    if (source?.storageId) {
+      ctx.storage.delete(source?.storageId as Id<'_storage'>);
+    }
   },
 });

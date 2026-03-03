@@ -54,8 +54,9 @@ export const sendMessage = mutation({
     threadId: v.string(),
     prompt: v.string(),
     sourceIds: v.array(v.id('sources')),
+    summaryIds: v.optional(v.array(v.id('scrapeLog'))),
   },
-  handler: async (ctx, { threadId, prompt, sourceIds }) => {
+  handler: async (ctx, { threadId, prompt, sourceIds, summaryIds }) => {
     const files: { type: 'file'; data: string; mimeType: string }[] = [];
 
     for (const id of sourceIds) {
@@ -77,11 +78,45 @@ export const sendMessage = mutation({
       }
     }
 
+    const summaryTexts: { type: 'text'; text: string }[] = [];
+    if (summaryIds) {
+      for (const id of summaryIds) {
+        const log = await ctx.db.get(id);
+        if (log?.summarizedMarkdown) {
+          summaryTexts.push({
+            type: 'text' as const,
+            text: `[Summary: ${log.title || log.urls[0]}]\n${log.summarizedMarkdown}`,
+          });
+        }
+      }
+    }
+
     const { messageId } = await saveMessage(ctx, components.agent, {
       threadId,
       message: {
         role: 'user',
-        content: [...files, { type: 'text', text: prompt }],
+        content: [...files, ...summaryTexts, { type: 'text', text: prompt }],
+      },
+    });
+
+    await ctx.scheduler.runAfter(0, internal.agent.generateResponseAsync, {
+      threadId,
+      promptMessageId: messageId,
+    });
+  },
+});
+
+export const sendMessageWithoutSource = mutation({
+  args: {
+    threadId: v.string(),
+    prompt: v.string(),
+  },
+  handler: async (ctx, { threadId, prompt }) => {
+    const { messageId } = await saveMessage(ctx, components.agent, {
+      threadId,
+      message: {
+        role: 'user',
+        content: [{ type: 'text', text: prompt }],
       },
     });
 

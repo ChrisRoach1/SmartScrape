@@ -17,8 +17,6 @@ import { api } from '@/convex/_generated/api';
 import { ScrollArea } from './ui/scroll-area';
 import { toast } from 'sonner';
 import Markdown from 'react-markdown';
-import { Thread } from '@/components/threads-panel';
-
 const chatFormSchema = z.object({
   message: z.string().min(1),
 });
@@ -26,7 +24,9 @@ type ChatFormValues = z.infer<typeof chatFormSchema>;
 
 type props = {
   selectedSources: Id<'sources'>[] | null;
-  selectedThread?: Thread | null;
+  selectedSummaries: Id<'scrapeLog'>[] | null;
+  selectedThread?: string | null;
+  handleSetSelectedThread: (threadId: string | null) => void;
 };
 
 export function ChatPanel(props: props) {
@@ -35,8 +35,6 @@ export function ChatPanel(props: props) {
     defaultValues: { message: '' },
   });
 
-  const [isExistingThread, setIsExistingThread] = useState<boolean>(props.selectedThread?._id ? true : false);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(props.selectedThread?._id ?? null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -44,14 +42,21 @@ export function ChatPanel(props: props) {
   const createThread = useMutation(api.agent.startThread);
   const sendMessage = useMutation(api.agent.sendMessage).withOptimisticUpdate((store, args) => {
     optimisticallySendMessage(api.agent.listThreadMessages)(store, {
-      threadId: currentThreadId ?? '',
+      threadId: props.selectedThread ?? '',
+      prompt: args.prompt,
+    });
+  });
+
+  const sendMessageWithoutSource = useMutation(api.agent.sendMessageWithoutSource).withOptimisticUpdate((store, args) => {
+    optimisticallySendMessage(api.agent.listThreadMessages)(store, {
+      threadId: props.selectedThread ?? '',
       prompt: args.prompt,
     });
   });
 
   const { results, status, loadMore } = useUIMessages(
     api.agent.listThreadMessages,
-    currentThreadId ? { threadId: currentThreadId } : 'skip',
+    props.selectedThread ? { threadId: props.selectedThread } : 'skip',
     { initialNumItems: 25, stream: true },
   );
 
@@ -71,9 +76,6 @@ export function ChatPanel(props: props) {
     }
   }, [results]);
 
-  useEffect(() => {
-    setCurrentThreadId(props.selectedThread?._id ?? null);
-  }, [props.selectedThread?._id]);
 
   const loadMoreMessages = async () => {
     if (status === 'CanLoadMore' && !isLoadingMore) {
@@ -89,12 +91,17 @@ export function ChatPanel(props: props) {
   };
 
   const handleSendMessage = async (values: ChatFormValues) => {
-    if (currentThreadId) {
-      await sendMessage({ prompt: values.message, threadId: currentThreadId, sourceIds: props.selectedSources ?? [] });
+    if (props.selectedThread) {
+      await sendMessageWithoutSource({ prompt: values.message, threadId: props.selectedThread });
     } else {
       const threadId = await createThread({ prompt: values.message, sourceIds: [] });
-      setCurrentThreadId(threadId);
-      await sendMessage({ prompt: values.message, threadId, sourceIds: props.selectedSources ?? [] });
+      props.handleSetSelectedThread(threadId);
+      await sendMessage({
+        prompt: values.message,
+        threadId,
+        sourceIds: props.selectedSources ?? [],
+        summaryIds: props.selectedSummaries ?? [],
+      });
     }
     form.reset();
   };
@@ -158,14 +165,14 @@ export function ChatPanel(props: props) {
                       }}
                       placeholder={props.selectedThread ? 'Continue the conversation...' : 'Add a source to start chatting...'}
                       className='h-10 pr-24 text-sm'
-                      disabled={!props.selectedThread && !props.selectedSources?.length}
+                      disabled={!props.selectedThread && !props.selectedSources?.length && !props.selectedSummaries?.length}
                     />
                   </FormControl>
 
-                  {!props.selectedThread?._id ? (
-                    <div className='absolute right-3 top-1/2 -translate-y-1/2'>
+                  {!props.selectedThread ? (
+                    <div className='absolute right-3 top-1/2 -translate-y-1/2 flex gap-1'>
                       <Badge variant='secondary' className='text-[10px] font-normal text-muted-foreground'>
-                        {props.selectedSources?.length ?? 0} sources
+                        {(props.selectedSources?.length ?? 0) + (props.selectedSummaries?.length ?? 0)} selected
                       </Badge>
                     </div>
                   ) : (
@@ -180,7 +187,9 @@ export function ChatPanel(props: props) {
                   type='submit'
                   size='icon'
                   className='shrink-0 transition-all'
-                  disabled={!form.formState.isValid || (!props.selectedThread && !props.selectedSources?.length)}
+                  disabled={
+                    !form.formState.isValid || (!props.selectedThread && !props.selectedSources?.length && !props.selectedSummaries?.length)
+                  }
                 >
                   <ArrowRight className='size-4' />
                 </Button>

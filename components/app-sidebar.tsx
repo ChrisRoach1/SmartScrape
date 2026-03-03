@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Home, Inbox, LogOut, Library, Users, Settings } from 'lucide-react';
+import { Home, Inbox, LogOut, Library, Users, Settings, Bot } from 'lucide-react';
 import { useQuery } from 'convex/react';
 
 import {
@@ -20,13 +20,15 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/convex/_generated/api';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@clerk/nextjs';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, isLoaded } = useUser();
+  const { has } = useAuth();
+  const hasPremiumAccess = has?.({ plan: 'pro' }) ?? false;
   const { signOut } = useClerk();
   const settings = useQuery(api.userSettings.get, {});
-  const settingsNeedsAttention =
-    settings !== undefined && (settings === null || !settings?.systemPrompt?.trim());
+  const settingsNeedsAttention = settings !== undefined && (settings === null || !settings?.systemPrompt?.trim());
 
   const items = [
     {
@@ -34,6 +36,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: '/dashboard',
       icon: Home,
       visible: true,
+    },
+    {
+      title: 'Chat',
+      url: '/dashboard/chat',
+      icon: Bot,
+      visible: hasPremiumAccess,
     },
     {
       title: 'Summarize',
@@ -83,11 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    className={cn(
-                      item.title === 'Settings' &&
-                        settingsNeedsAttention &&
-                        'font-semibold animate-settings-attention',
-                    )}
+                    className={cn(item.title === 'Settings' && settingsNeedsAttention && 'font-semibold animate-settings-attention')}
                   >
                     <Link href={item.url}>
                       <item.icon />

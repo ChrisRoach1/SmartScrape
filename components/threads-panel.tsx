@@ -18,8 +18,8 @@ export type Thread = {
 };
 
 type Props = {
-  selectedThread: Thread | null;
-  handleSetSelectedThread: (thread: Thread | null) => void;
+  selectedThread: string | null;
+  handleSetSelectedThread: (threadId: string | null) => void;
 };
 
 export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props) {
@@ -27,10 +27,10 @@ export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props)
   const deleteThread = useMutation(api.agent.deleteThread);
 
   const toggleSelectedThread = (thread: Thread) => {
-    if (selectedThread?._id === thread._id) {
+    if (selectedThread === thread._id) {
       handleSetSelectedThread(null);
     } else {
-      handleSetSelectedThread(thread);
+      handleSetSelectedThread(thread._id);
     }
   };
 
@@ -72,7 +72,7 @@ export function ThreadsPanel({ selectedThread, handleSetSelectedThread }: Props)
         ) : threads.length > 0 ? (
           <div className='flex flex-1 flex-col gap-0.5 overflow-y-auto'>
             {threads.map((thread) => {
-              const isSelected = selectedThread?._id === thread._id;
+              const isSelected = selectedThread === thread._id;
               const displayTitle = thread.title ?? 'Untitled';
 
               return (

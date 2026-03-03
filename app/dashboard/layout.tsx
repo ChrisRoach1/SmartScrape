@@ -33,10 +33,13 @@ export default function RootLayout({
       break;
     case '/dashboard/competitors':
       breadcrumb = 'Competitors';
-      break;    
+      break;
     case '/dashboard/settings':
       breadcrumb = 'Settings';
-      break;            
+      break;
+    case '/dashboard/chat':
+      breadcrumb = 'Chat';
+      break;
     default:
       breadcrumb = '';
       break;

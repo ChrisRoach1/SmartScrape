@@ -134,6 +134,40 @@ export const getAllLogs = query({
   },
 });
 
+export const getCompletedLogs = query({
+  args: {
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error('Not authenticated');
+    }
+
+    const userId = identity.tokenIdentifier.split('|')[1];
+
+    let results;
+
+    if (args.searchTerm && args.searchTerm.trim() !== '') {
+      results = await ctx.db
+        .query('scrapeLog')
+        .withSearchIndex('search_content', (q) =>
+          q.search('summarizedMarkdown', args.searchTerm!).eq('userId', userId).eq('status', 'completed'),
+        )
+        .collect();
+    } else {
+      results = await ctx.db
+        .query('scrapeLog')
+        .withIndex('by_userId', (q) => q.eq('userId', userId))
+        .order('desc')
+        .collect();
+      results = results.filter((log) => log.status === 'completed');
+    }
+
+    return results.sort((a, b) => b._creationTime - a._creationTime);
+  },
+});
+
 export const searchLogs = query({
   args: {
     searchTerm: v.optional(v.string()),
